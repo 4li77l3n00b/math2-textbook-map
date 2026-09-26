@@ -691,7 +691,7 @@ addEventListener('keydown', e => {
   if (VIEW !== 'read' || e.ctrlKey || e.metaKey || e.altKey || !$('#modal').hidden) return;
   if (e.target.closest && e.target.closest('input, select, textarea, [contenteditable]')) return;
   const k = e.key.toLowerCase();
-  const d = e.key === 'ArrowDown' || k === 'j' ? 1 : e.key === 'ArrowUp' || k === 'k' ? -1 : 0;
+  const d = e.key === 'ArrowDown' || e.key === 'ArrowRight' || k === 'j' ? 1 : e.key === 'ArrowUp' || e.key === 'ArrowLeft' || k === 'k' ? -1 : 0;
   if (d) { e.preventDefault(); jump(d); }
 });
 function currentPage() {
@@ -947,7 +947,7 @@ addEventListener('keydown', e => {
   if (VIEW !== 'cards' || e.ctrlKey || e.metaKey || e.altKey || !$('#modal').hidden) return;
   if (e.target.closest && e.target.closest('input, select, textarea, [contenteditable]')) return;
   const k = e.key.toLowerCase();
-  const d = e.key === 'ArrowDown' || k === 'j' ? 1 : e.key === 'ArrowUp' || k === 'k' ? -1 : 0;
+  const d = e.key === 'ArrowDown' || e.key === 'ArrowRight' || k === 'j' ? 1 : e.key === 'ArrowUp' || e.key === 'ArrowLeft' || k === 'k' ? -1 : 0;
   if (d) { e.preventDefault(); kpStep(d); }
   else if (k === 'l') kpList(CV.nolist);
   else if (k === '1' || k === '2' || k === '3') kpTab(['src', 'dep', 'exam'][+k - 1]);
@@ -979,7 +979,7 @@ function renderCardDetail() {
   el.innerHTML = `<div class="kpd" data-tab="${CV.tab}">
     <div class="kpd-top"><button class="icon" data-kplist title="收起或展开左侧列表（L）">${CV.nolist ? '☰ 列表' : '⇤ 收起列表'}</button>
       <span class="crumb muted small" title="${esc(D.books[k.bk]?.name || '')} › ${esc(nodePath(k.node))}">${esc(BOOK_SHORT[k.bk] || '')} › ${esc(nodePath(k.node))}</span>
-      ${pos >= 0 ? `<span class="kp-nav"><button class="icon" data-kpstep="-1" ${pos > 0 ? '' : 'disabled'} title="上一个（↑）">↑</button><span class="muted small">${pos + 1} / ${CV.order.length}</span><button class="icon" data-kpstep="1" ${pos < CV.order.length - 1 ? '' : 'disabled'} title="下一个（↓）">↓</button></span>` : ''}</div>
+      ${pos >= 0 ? `<span class="kp-nav"><button class="icon" data-kpstep="-1" ${pos > 0 ? '' : 'disabled'} title="上一个（↑ / ←）">↑</button><span class="muted small">${pos + 1} / ${CV.order.length}</span><button class="icon" data-kpstep="1" ${pos < CV.order.length - 1 ? '' : 'disabled'} title="下一个（↓ / →）">↓</button></span>` : ''}</div>
     <h1 class="kp-title">${esc(k.n)} <span class="badge muted">${KIND[k.k] || k.k}</span></h1>
     <div class="kp-stmt tex">${stmtHtml(k.s)}<button class="copy" data-copy="${k.i}" title="复制这条表述（公式为 LaTeX 源码）">复制</button></div>
     <div class="kp-meta" data-kptab="exam" title="查看真题（3）">
