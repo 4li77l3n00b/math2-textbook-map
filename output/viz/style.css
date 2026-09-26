@@ -46,11 +46,13 @@ a:hover { text-decoration: underline; }
 /* hidden views keep their rendering instead of display:none, so a tab switch does not rebuild big lists (slow in the
    desktop app's WebKitGTK). Hide by stacking + content-visibility only: visibility / pointer-events are inherited, and
    toggling them restyles every descendant (~0.4 s for the question list) */
-.view:not(.on) { display: block; content-visibility: hidden; z-index: 0; }
+.view:not(.on) { display: flex; content-visibility: hidden; z-index: 0; }
 .view.on { display: flex; z-index: 1; }
+/* a view keeps the same display and padding whether shown or hidden: changing either re-lays out everything inside
+   (the ~900-row question list took ~0.5 s per tab switch in WebKitGTK) */
+.view.scroll, .view.scroll:not(.on) { display: block; padding: 18px 24px 60px; }
 .scroll { overflow: auto; }
 .panel { background: var(--panel); }
-.view.scroll.on { display: block; padding: 18px 24px 60px; }
 
 /* reader */
 #toc { width: 290px; flex: none; border-right: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; }
@@ -151,17 +153,17 @@ table.t th { font-weight: 600; color: var(--muted); font-size: 12px; position: s
 .tw { display: inline-block; width: 14px; color: var(--muted); }
 
 /* cards */
-#cardList { width: 420px; flex: none; border-right: 1px solid var(--line); display: flex; flex-direction: column; }
-#cardList .ctl { padding: 10px; display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid var(--line); }
-#cardList .ctl input[type=search] { flex: 1 1 100%; }
-#cardList .lst { overflow: auto; flex: 1; }
+#cardList, #qList { width: 420px; flex: none; border-right: 1px solid var(--line); display: flex; flex-direction: column; }
+#cardList .ctl, #qList .ctl { padding: 10px; display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid var(--line); }
+#cardList .ctl input[type=search], #qList .ctl input[type=search] { flex: 1 1 100%; }
+#cardList .lst, #qList .lst { overflow: auto; flex: 1; }
 .ci { display: grid; grid-template-columns: 1fr 70px; gap: 8px; padding: 6px 12px; border-bottom: 1px solid var(--line); cursor: pointer; }
 .ci:hover, .ci.cur { background: var(--hover); }
 .ci .s { font-size: 11.5px; color: var(--muted); }
 .ci .bars { display: flex; flex-direction: column; gap: 4px; justify-content: center; }
-#cardDetail { flex: 1; padding: 18px 26px 80px; container-type: inline-size; }
+#cardDetail, #qDetail { flex: 1; padding: 18px 26px 80px; }
 /* knowledge-point page: a centred reading column (title, statement, one-line summary), details behind tabs */
-#v-cards.nolist #cardList { display: none; }
+#v-cards.nolist #cardList, #v-questions.nolist #qList { display: none; }
 .kpd { max-width: 740px; margin: 0 auto; }
 .kpd-top { display: flex; align-items: center; gap: 12px; min-height: 28px; }
 .kpd-top .crumb { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -216,22 +218,32 @@ table.t th { font-weight: 600; color: var(--muted); font-size: 12px; position: s
 .star.on { color: #e0a100; }
 .qnav .star { font-size: 13px; border: 1px solid var(--line); border-radius: 6px; padding: 3px 9px; color: var(--muted); }
 .qnav .star.on { color: #c68a00; border-color: #e0a100; }
-.qbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 8px; }
-.qbar h2 { margin: 0 6px 0 0; }
-.qbar #qq { width: 260px; }
-/* the question list is laid out as grid rows rather than a real table: off-screen rows skip layout (content-visibility),
-   which a table row cannot do — a table of ~900 rows × 2000 formulas takes over a second to lay out in WebKitGTK */
-table.qt-list, table.qt-list tbody { display: block; }
-table.qt-list tr { display: grid; grid-template-columns: 26px 74px 44px minmax(0, 1fr) 30% 40px; align-items: start; border-bottom: 1px solid var(--line); }
-table.qt-list th, table.qt-list td { border-bottom: none; min-width: 0; }
-table.qt-list tr:first-child { position: sticky; top: 0; z-index: 2; background: var(--bg); }
-table.qt-list tr.yr { display: block; position: sticky; top: 26px; z-index: 1; background: var(--hover); }
-table.qt-list tr.yr td { font-weight: 600; padding: 6px 8px; }
-table.qt-list tr.qi { content-visibility: auto; contain-intrinsic-size: auto 56px; border-top: none; padding: 0; }
-table.qt-list tr.qi td { padding: 7px 6px; }
-table.qt-list td.stem { font-size: 13px; line-height: 1.6; }
-table.qt-list td.stem .clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-table.qt-list tr.qi.seen td b { color: var(--muted); font-weight: 500; }
+/* questions page list: compact rows (label, type, 2-line stem, main topic); off-screen rows skip layout */
+.qyr { position: sticky; top: 0; z-index: 1; background: var(--hover); font-weight: 600; padding: 5px 12px; border-bottom: 1px solid var(--line); }
+.qrow { padding: 7px 12px 8px; border-bottom: 1px solid var(--line); cursor: pointer; content-visibility: auto; contain-intrinsic-size: auto 70px; }
+.qrow:hover, .qrow.cur { background: var(--hover); }
+.qrow.cur { box-shadow: inset 3px 0 0 var(--accent); }
+.qrow .h { display: flex; align-items: center; gap: 6px; }
+.qrow .h b { font-size: 13.5px; }
+.qrow.seen .h b { color: var(--muted); font-weight: 500; }
+.qrow .stem { font-size: 12.5px; line-height: 1.6; margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.qrow .s { font-size: 11.5px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* question reading column (reuses the knowledge-point page's .kpd layout) */
+.kpd .kpd-top .star { font-size: 13px; border: 1px solid var(--line); border-radius: 6px; padding: 3px 9px; color: var(--muted); }
+.kpd .kpd-top .star.on { color: #c68a00; border-color: #e0a100; }
+.kpd .q-stem { font-size: 16px; line-height: 1.95; }
+.kpd .q-ans { margin-top: 18px; }
+.q-opts { display: grid; grid-template-columns: 1fr; gap: 6px 28px; margin: 12px 0 4px; font-size: 15px; line-height: 1.8; }
+.kpd .q-opts { font-size: 16px; }
+.q-opts.two { grid-template-columns: 1fr 1fr; }
+.q-opts .opt { display: flex; gap: 10px; align-items: baseline; padding: 5px 12px; border-radius: 6px; background: var(--hover); }
+.q-opts .ol { font-weight: 600; color: var(--muted); flex: none; }
+.q-sol > summary { cursor: pointer; margin: 10px 0 4px; }
+.kpd .q-sol { margin-bottom: 22px; }
+.q-topic { margin: 10px 0; }
+.kpd section[data-pane=topics] > .q-topic:first-child, .kpd section[data-pane=notes] > h3:first-child { margin-top: 16px; }
+.q-steps-h { margin: 14px 0 6px; font-size: 13px; }
+.kpd[data-tab=steps] section[data-pane=steps], .kpd[data-tab=topics] section[data-pane=topics], .kpd[data-tab=notes] section[data-pane=notes] { display: block; }
 .seen-dot { color: var(--muted); font-size: 11px; }
 .steps-h { display: flex; align-items: baseline; gap: 10px; }
 .steps-h .seg { margin-left: auto; display: inline-flex; align-items: center; gap: 0; font-size: 12px; font-weight: normal; color: var(--muted); }
@@ -250,7 +262,7 @@ table.qt-list tr.qi.seen td b { color: var(--muted); font-weight: 500; }
 .step .n span { display: inline-flex; width: 26px; height: 26px; border-radius: 50%; align-items: center; justify-content: center;
   background: var(--hover); border: 1.5px solid var(--line); font-weight: 700; font-size: 13px; color: var(--muted); }
 .step .stxt { font-size: 14.5px; line-height: 1.85; padding-top: 1px; }
-.step .stxt sup, .step .stxt sub, .qi .d sup, .qi .d sub, #modal .box-note sup, #modal .box-note sub, .q-note sup, .q-note sub, #modal .small sup, #modal .small sub { font-size: .72em; line-height: 0; }
+.step .stxt sup, .step .stxt sub, .qi .d sup, .qi .d sub, .qbox .box-note sup, .qbox .box-note sub, .q-note sup, .q-note sub, .qbox .small sup, .qbox .small sub { font-size: .72em; line-height: 0; }
 .cites { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 details.cite { font-size: 12.5px; border: 1px solid var(--line); border-left: 3px solid var(--line); border-radius: 4px 12px 12px 4px; background: var(--bg); }
 details.cite > summary { list-style: none; cursor: pointer; padding: 2px 9px 2px 6px; }
@@ -264,7 +276,7 @@ details.cite.c { border-left-color: var(--c-core); } details.cite.a { border-lef
 details.cite.hit { outline: 2px solid var(--accent); }
 .cite .qt { color: var(--muted); margin-top: 3px; }
 .q-note { line-height: 1.75; }
-.step .stxt .katex, .q-note .katex, #modal .box-note .katex, #modal .small .katex, .qi .d .katex { font-size: 1.06em; }
+.step .stxt .katex, .q-note .katex, .qbox .box-note .katex, .qbox .small .katex, .qi .d .katex { font-size: 1.06em; }
 #tip { position: fixed; z-index: 60; background: var(--ink); color: var(--bg); font-size: 12px; padding: 5px 8px; border-radius: 5px; pointer-events: none; max-width: 420px; line-height: 1.45; box-shadow: 0 3px 12px rgba(0,0,0,.25); }
 #tip[hidden] { display: none; }
 
@@ -278,8 +290,8 @@ details.cite.hit { outline: 2px solid var(--accent); }
   #toc, #minimap { display: none; }
   #v-read.on { flex-direction: column; }
   #side { width: auto; height: 40%; border-left: none; border-top: 1px solid var(--line); }
-  #cardList { width: 100%; }
-  #v-cards.on { flex-direction: column; }
+  #cardList, #qList { width: 100%; }
+  #v-cards.on, #v-questions.on { flex-direction: column; }
   #graphSide { display: none; }
   .tree .row { grid-template-columns: 1fr 60px 60px; }
   .tree .row > :nth-child(3), .tree .row > :nth-child(5) { display: none; }

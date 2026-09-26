@@ -359,18 +359,20 @@ let QNAV = { ids: [], fb: null };
 let CITE_MODE = 'chip';
 try { CITE_MODE = localStorage.getItem('math2viz.citeMode') || (localStorage.getItem('math2viz.citeOpen') === '1' ? 'open' : 'chip'); } catch (e) { /* default */ }
 const CITE_MODES = [['hide', '隐藏'], ['chip', '标签'], ['open', '展开']];
-function openQuestion(id, focusBlock, ids) {
-  const q = qById[id];
-  if (ids) QNAV = { ids, fb: focusBlock };
-  if (!QNAV.ids.includes(id)) QNAV = { ids: [id], fb: focusBlock };
-  SEEN.add(id); store.put('seen', SEEN);
-  $$(`tr.qi[data-q="${id}"]`).forEach(r => {
-    r.classList.add('seen');
-    const b = r.children[1];
-    if (b && !b.querySelector('.seen-dot')) b.insertAdjacentHTML('beforeend', ' <span class="seen-dot" title="看过">✓</span>');
-  });
-  qCount();
-  const pos = QNAV.ids.indexOf(id), n = QNAV.ids.length;
+// the leading "1." / "(3)" of a stem repeats the title; choice options are typeset as a list (two columns when short)
+const STEM_NO = /^\s*(?:\(\d+\)|\d+\s*[.．、])\s*/;
+function stemBlock(q) {
+  const body = q.stem.replace(STEM_NO, '');
+  const m = /\n\s*\(A[)）]/.exec(body);
+  const parts = m ? body.slice(m.index).split(/(?<=^|\s)(?=\([A-D][)）])/).map(x => x.trim()).filter(Boolean) : [];
+  if (parts.length !== 4 || parts.map(x => x[1]).join('') !== 'ABCD') return `<div class="tex q-stem">${texHtml(body)}</div>`;
+  const opts = parts.map(x => ({ l: x[1], t: x.replace(/^\([A-D][)）]\s*/, '') }));
+  const short = opts.every(o => o.t.replace(/\\[a-zA-Z]+|[{}$\s]/g, '').length <= 22);
+  return `<div class="tex q-stem">${texHtml(body.slice(0, m.index).trim())}</div>
+    <div class="q-opts${short ? ' two' : ''}">${opts.map(o => `<div class="opt"><span class="ol">${o.l}</span><span class="tex">${texHtml(o.t)}</span></div>`).join('')}</div>`;
+}
+// the parts of a question shown both in the pop-up (from other pages) and on the questions page
+function qSections(q, focusBlock) {
   const cites = q.ci.map((c, i) => ({ ...c, i }));
   const used = new Set();
   // a citation is a chip under the step it supports; its wording, quote and book link unfold on click.
@@ -395,28 +397,51 @@ function openQuestion(id, focusBlock, ids) {
   }).join('');
   const rest = cites.filter(c => !used.has(c.i));
   if (rest.length) steps += `<div class="step orphan"><div class="n"><span>·</span></div><div class="body"><div class="stxt muted small">未对应到具体步骤的依据</div><div class="cites">${rest.map(c => citeHtml(c, 0)).join('')}</div></div></div>`;
+  return {
+    badges: `<span class="badge muted">${TYPE[q.ty]}</span> <span class="badge muted">${q.sub === 'LA' ? '线代' : '高数'}</span>${q.cx ? ' <span class="badge muted" title="早期 codex 版映射，前置引用偏多">早期版</span>' : ''}`,
+    stem: stemBlock(q),
+    selftest: `<label class="small" title="先隐藏答案、解析和考查主题，自己做完再看"><input type="checkbox" data-selftest ${SELFTEST ? 'checked' : ''}> 自测模式</label>`,
+    reveal: SELFTEST ? '<button class="reveal-btn" data-reveal>显示答案、解析与考查主题</button>' : '',
+    ans: `<div class="q-ans"><span class="lbl">答案</span><div class="tex">${texHtml(q.ans)}</div></div>
+      <details class="q-sol"><summary class="muted">参考解析</summary><div class="tex">${texHtml(q.sol)}</div></details>`,
+    topics: q.to.map(t => `<div class="q-topic"><span class="badge ${t.p ? 'r-P' : 'r-S'}">${t.p ? '主' : '次'}</span>
+      ${t.kp != null ? kpLink(t.kp) : `<a data-card="${t.c}">${esc(cardName(D.cards[t.c]))}</a>`} <span class="muted small">${esc(nodePath(D.cards[t.c].n))}</span>
+      <div class="muted small">${fmtStep(t.r)}</div></div>`).join('') + (q.tn ? `<div class="box-note">${fmtStep(q.tn)}</div>` : ''),
+    stepsHead: `<span class="muted small">${q.steps.length} 步 · ${q.ci.length} 条依据</span>
+      <span class="seg" title="依据的显示方式">依据${CITE_MODES.map(([k, l]) => `<button class="small${k === CITE_MODE ? ' on' : ''}" data-citemode="${k}">${l}</button>`).join('')}</span>`,
+    steps: `<div class="steps${CITE_MODE === 'hide' && focusBlock == null ? ' no-cites' : ''}">${steps}</div>`,
+    notes: (q.nit.length ? `<h3>书中未找到</h3>${q.nit.map(x => `<div class="box-note"><b>${fmtStep(x.k)}</b> <span class="badge muted">${VERDICT[x.v] || x.v}</span>
+      ${x.rb.length ? ` · <a data-read="${x.rb.join(',')}">最接近的原文</a>` : ''}<div class="muted small">${fmtStep(x.no || x.se)}</div></div>`).join('')}` : '')
+      + (q.no ? `<h3>备注</h3><div class="muted q-note">${fmtStep(q.no)}</div>` : ''),
+    nNotes: q.nit.length + (q.no ? 1 : 0),
+  };
+}
+function markSeen(id) {
+  SEEN.add(id); store.put('seen', SEEN);
+  $$(`.qrow[data-qsel="${id}"]`).forEach(r => {
+    r.classList.add('seen');
+    const h = r.querySelector('.h');
+    if (h && !h.querySelector('.seen-dot')) h.insertAdjacentHTML('beforeend', '<span class="seen-dot" title="看过">✓</span>');
+  });
+  qCount();
+}
+// pop-up version, opened from the other pages (textbook, knowledge points, blind spots …)
+function openQuestion(id, focusBlock, ids) {
+  const q = qById[id];
+  if (ids) QNAV = { ids, fb: focusBlock };
+  if (!QNAV.ids.includes(id)) QNAV = { ids: [id], fb: focusBlock };
+  markSeen(id);
+  const pos = QNAV.ids.indexOf(id), n = QNAV.ids.length;
+  const x = qSections(q, focusBlock);
   const html = `<div class="qnav"><button data-qnav="-1" ${pos > 0 ? '' : 'disabled'} title="上一题（←）">← 上一题</button>
       <span class="muted small">${n > 1 ? `${pos + 1} / ${n}` : ''}</span><button data-qnav="1" ${pos < n - 1 ? '' : 'disabled'} title="下一题（→）">下一题 →</button>
-      <span style="flex:1"></span>${starBtn(id, ' 标记')}<label class="small" title="先隐藏答案、解析和考查主题，自己做完再看"><input type="checkbox" id="selftest" ${SELFTEST ? 'checked' : ''}> 自测模式</label>
+      <span style="flex:1"></span><button class="small" data-qopen="${id}" title="在真题页中打开">在真题页打开</button>${starBtn(id, ' 标记')}${x.selftest}
       <button class="close" title="关闭（Esc）">×</button></div>
-    <h2>${q.y} 年 第 ${esc(q.lb)} 题 <span class="badge muted">${TYPE[q.ty]}</span>
-      <span class="badge muted">${q.sub === 'LA' ? '线代' : '高数'}</span>${q.cx ? ' <span class="badge muted" title="早期 codex 版映射，前置引用偏多">早期版</span>' : ''}</h2>
-    <div class="tex q-stem">${texHtml(q.stem)}</div>
-    ${SELFTEST ? '<button class="reveal-btn" id="reveal">显示答案、解析与考查主题</button>' : ''}
-    <div class="q-reveal" ${SELFTEST ? 'hidden' : ''}>
-    <div class="q-ans"><span class="lbl">答案</span><div class="tex">${texHtml(q.ans)}</div></div>
-    <details><summary class="muted" style="cursor:pointer;margin-top:10px">参考解析</summary><div class="tex">${texHtml(q.sol)}</div></details>
-    <h3>考查主题</h3>
-    ${q.to.map(t => `<div style="margin:4px 0"><span class="badge ${t.p ? 'r-P' : 'r-S'}">${t.p ? '主' : '次'}</span>
-      ${t.kp != null ? kpLink(t.kp) : `<a data-card="${t.c}">${esc(cardName(D.cards[t.c]))}</a>`} <span class="muted small">${esc(nodePath(D.cards[t.c].n))}</span>
-      <div class="muted small">${fmtStep(t.r)}</div></div>`).join('')}
-    ${q.tn ? `<div class="box-note">${fmtStep(q.tn)}</div>` : ''}
-    <h3 class="steps-h">解题步骤与教材依据 <span class="muted small">${q.steps.length} 步 · ${q.ci.length} 条依据</span>
-      <span class="seg" title="依据的显示方式">依据${CITE_MODES.map(([k, l]) => `<button class="small${k === CITE_MODE ? ' on' : ''}" data-citemode="${k}">${l}</button>`).join('')}</span></h3>
-    <div class="steps${CITE_MODE === 'hide' && focusBlock == null ? ' no-cites' : ''}">${steps}</div>
-    ${q.nit.length ? `<h3>书中未找到</h3>${q.nit.map(x => `<div class="box-note"><b>${fmtStep(x.k)}</b> <span class="badge muted">${VERDICT[x.v] || x.v}</span>
-      ${x.rb.length ? ` · <a data-read="${x.rb.join(',')}">最接近的原文</a>` : ''}<div class="muted small">${fmtStep(x.no || x.se)}</div></div>`).join('')}` : ''}
-    ${q.no ? `<h3>备注</h3><div class="muted q-note">${fmtStep(q.no)}</div>` : ''}</div>`;
+    <h2>${q.y} 年 第 ${esc(q.lb)} 题 ${x.badges}</h2>
+    ${x.stem}${x.reveal}
+    <div class="q-reveal" ${SELFTEST ? 'hidden' : ''}>${x.ans}
+    <h3>考查主题</h3>${x.topics}
+    <h3 class="steps-h">解题步骤与教材依据 ${x.stepsHead}</h3>${x.steps}${x.notes}</div>`;
   const box = $('#modal .content');
   box.innerHTML = html;
   $('#modal').dataset.cur = id;
@@ -429,22 +454,29 @@ $('#modal').addEventListener('click', e => {
   if (e.target.id === 'modal' || e.target.classList.contains('close')) return closeModal();
   const nav = e.target.closest('[data-qnav]');
   if (nav) stepQuestion(+nav.dataset.qnav);
-  if (e.target.id === 'reveal') { $('#modal .q-reveal').hidden = false; e.target.remove(); }
+  const op = e.target.closest('[data-qopen]');
+  if (op) { closeModal(); go('questions', op.dataset.qopen); }
+});
+// controls shared by the pop-up and the questions page: self-test reveal, citation display mode
+document.addEventListener('click', e => {
+  const root = e.target.closest && e.target.closest('.qbox');
+  if (!root) return;
+  if (e.target.closest('[data-reveal]')) { root.querySelector('.q-reveal').hidden = false; e.target.closest('[data-reveal]').remove(); }
   const cm = e.target.closest('[data-citemode]');
   if (cm) {
     CITE_MODE = cm.dataset.citemode;
     try { localStorage.setItem('math2viz.citeMode', CITE_MODE); } catch (err) { /* ignore */ }
-    $$('#modal [data-citemode]').forEach(b => b.classList.toggle('on', b === cm));
-    $('#modal .steps').classList.toggle('no-cites', CITE_MODE === 'hide');
-    if (CITE_MODE !== 'hide') $$('#modal details.cite').forEach(d => { d.open = CITE_MODE === 'open' && !d.querySelector('summary .muted.small'); });
+    root.querySelectorAll('[data-citemode]').forEach(b => b.classList.toggle('on', b === cm));
+    root.querySelector('.steps').classList.toggle('no-cites', CITE_MODE === 'hide');
+    if (CITE_MODE !== 'hide') root.querySelectorAll('details.cite').forEach(d => { d.open = CITE_MODE === 'open' && !d.querySelector('summary .muted.small'); });
   }
 });
-$('#modal').addEventListener('change', e => {
-  if (e.target.id !== 'selftest') return;
+document.addEventListener('change', e => {
+  if (!e.target.matches || !e.target.matches('[data-selftest]')) return;
   SELFTEST = e.target.checked;
   try { localStorage.setItem('math2viz.selftest', SELFTEST ? '1' : '0'); } catch (err) { /* ignore */ }
-  const r = $('#modal .q-reveal'), b = $('#reveal');
-  if (!SELFTEST) { r.hidden = false; if (b) b.remove(); }
+  $$('[data-selftest]').forEach(c => { c.checked = SELFTEST; });
+  if (!SELFTEST) $$('.qbox').forEach(r => { const v = r.querySelector('.q-reveal'); if (v) v.hidden = false; r.querySelectorAll('[data-reveal]').forEach(b => b.remove()); });
 });
 function stepQuestion(d) {
   const i = QNAV.ids.indexOf($('#modal').dataset.cur) + d;
@@ -485,7 +517,7 @@ document.addEventListener('click', e => {
   const a = e.target.closest('[data-kp],[data-card],[data-read],[data-q],[data-node]');
   if (!a) return;
   if (a.dataset.q) {
-    const scope = a.closest('#modal') ? null : a.closest('#qtable, #cardDetail, #side, #graphSide, #v-blind, .view');
+    const scope = a.closest('#modal') ? null : a.closest('#cardDetail, #side, #graphSide, #v-blind, .view');
     const ids = scope ? [...new Set([...scope.querySelectorAll('[data-q]')].map(x => x.dataset.q))] : null;
     openQuestion(a.dataset.q, a.dataset.fb != null ? +a.dataset.fb : null, ids);
     return;
@@ -1310,12 +1342,13 @@ function toggleMark(id) {
   qCount();
   if (QV.marked && VIEW === 'questions') renderQuestions();
 }
-const QV = { q: '', sub: '', sort: 'desc', marked: false, unseen: false, list: [] };
+const QV = { q: '', sub: '', sort: 'desc', marked: false, unseen: false, list: [], cur: null, tab: 'steps', nolist: false };
+try { QV.tab = localStorage.getItem('math2viz.qTab') || 'steps'; QV.nolist = localStorage.getItem('math2viz.qNoList') === '1'; } catch (e) { /* defaults */ }
 function qCount() {
   const n = $('#qn');
   if (n) n.textContent = `${QV.list.length} 题 · 已看 ${QV.list.filter(id => SEEN.has(id)).length} · 标记 ${QV.list.filter(id => MARK.has(id)).length}`;
 }
-const stemPreview = q => clip(q.stem.split(/\n\s*\(A\)/)[0].replace(/\$\$([\s\S]*?)\$\$/g, (m, f) => `$${f.trim()}$`).replace(/\s*\n\s*/g, ' '), 170);
+const stemPreview = q => clip(q.stem.replace(STEM_NO, '').split(/\n\s*\(A\)/)[0].replace(/\$\$([\s\S]*?)\$\$/g, (m, f) => `$${f.trim()}$`).replace(/\s*\n\s*/g, ' '), 170);
 // the list shows ~2000 preview formulas: render each stem once to an HTML string (KaTeX renderToString, cached) instead of
 // letting auto-render walk the whole table on every visit — noticeably slow in the desktop app's WebKitGTK
 const STEM_HTML = new Map();
@@ -1330,15 +1363,16 @@ function stemHtml(q) {
   return h;
 }
 const starBtn = (id, label = '') => `<button class="star${MARK.has(id) ? ' on' : ''}" data-star="${id}" title="标记这道题（只保存在本浏览器）">★${label}</button>`;
+// questions page: filterable list on the left, the selected question in a centred reading column on the right
 function renderQuestions() {
-  const el = $('#v-questions');
+  const el = $('#qList');
   if (!el.dataset.init) {
     el.dataset.init = 1;
-    el.innerHTML = `<div class="qbar"><h2>真题</h2><input type="search" id="qq" placeholder="搜索题干、考点、年份、题号…">
+    el.innerHTML = `<div class="ctl"><input type="search" id="qq" placeholder="搜索题干、考点、年份、题号…">
       <select id="qsub"><option value="">高数＋线代</option><option value="GS">高数</option><option value="LA">线代</option></select>
       <select id="qsort"><option value="desc">新 → 旧</option><option value="asc">旧 → 新</option></select>
-      <label class="small"><input type="checkbox" id="qmark">只看标记</label><label class="small"><input type="checkbox" id="qunseen">只看未看过</label>
-      <span id="qn" class="muted small"></span></div><div id="qtable"></div>`;
+      <label class="small"><input type="checkbox" id="qmark">只看标记</label><label class="small"><input type="checkbox" id="qunseen">只看未看过</label></div>
+      <div class="lst"><div id="qn" class="muted small" style="padding:6px 12px"></div><div id="qrows"></div></div>`;
     const upd = () => { QV.q = $('#qq').value.trim(); QV.sub = $('#qsub').value; QV.sort = $('#qsort').value; QV.marked = $('#qmark').checked; QV.unseen = $('#qunseen').checked; renderQuestions(); };
     ['#qq', '#qsub', '#qsort', '#qmark', '#qunseen'].forEach(x => $(x).addEventListener('input', upd));
   }
@@ -1349,38 +1383,105 @@ function renderQuestions() {
     .sort((a, b) => (QV.sort === 'asc' ? a.y - b.y : b.y - a.y) || a.id.localeCompare(b.id, 'en', { numeric: true }));
   QV.list = qs.map(q => q.id);
   qCount();
-  // same list as last time (e.g. just switching back to this tab): keep the rendered table
+  // same list as last time (e.g. just switching back to this tab): keep the rendered rows
   const sig = QV.list.join(',');
-  if (el.dataset.sig === sig && $('#qtable table')) return;
-  el.dataset.sig = sig;
-  const rows = [];
-  let year = null;
-  for (const q of qs) {
-    if (q.y !== year) {
-      year = q.y;
-      const n = qs.filter(x => x.y === year).length;
-      rows.push(`<tr class="yr"><td colspan="6">${year} 年 <span class="muted small">${n} 题</span></td></tr>`);
+  if (el.dataset.sig !== sig || !$('#qrows').childElementCount) {
+    el.dataset.sig = sig;
+    const rows = [];
+    let year = null;
+    for (const q of qs) {
+      if (q.y !== year) {
+        year = q.y;
+        rows.push(`<div class="qyr">${year} 年 <span class="muted small">${qs.filter(x => x.y === year).length} 题</span></div>`);
+      }
+      const main = q.to.filter(t => t.p).map(tname).join('；');
+      rows.push(() => `<div class="qrow${SEEN.has(q.id) ? ' seen' : ''}${q.id === QV.cur ? ' cur' : ''}" data-qsel="${q.id}">
+        <div class="h">${starBtn(q.id)}<b>${esc(q.lb)}</b><span class="badge muted">${TYPE[q.ty]}</span>${SEEN.has(q.id) ? '<span class="seen-dot" title="看过">✓</span>' : ''}</div>
+        <div class="stem tex">${stemHtml(q)}</div>${main ? `<div class="s">${esc(main)}</div>` : ''}</div>`);
     }
-    const main = q.to.filter(t => t.p);
-    rows.push(() => `<tr class="qi${SEEN.has(q.id) ? ' seen' : ''}" data-q="${q.id}"><td>${starBtn(q.id)}</td><td><b>${esc(q.lb)}</b>${SEEN.has(q.id) ? ' <span class="seen-dot" title="看过">✓</span>' : ''}</td>
-      <td><span class="badge muted">${TYPE[q.ty]}</span></td><td class="tex stem"><div class="clamp">${stemHtml(q)}</div></td>
-      <td class="small">${main.map(t => t.kp != null ? `<a data-kp="${t.kp}">${esc(K[t.kp].n)}</a>` : esc(tname(t))).join('；')}</td><td class="muted">${q.ci.length}</td></tr>`);
-  }
-  const row = r => (typeof r === 'function' ? r() : r);
-  // first screenful at once, the rest in slices so switching to this tab never blocks for long
-  const FIRST = 60, SLICE = 120, token = QV.token = {};
-  $('#qtable').innerHTML = '<table class="t qt-list"><tbody><tr><th style="width:26px"></th><th style="width:74px">题</th><th style="width:40px">题型</th><th>题干</th><th style="width:30%">主考点</th><th style="width:40px" title="解答引用教材的条数">引用</th></tr>'
-    + rows.slice(0, FIRST).map(row).join('') + '</tbody></table>' + (qs.length ? '' : '<p class="muted">没有符合条件的题目。</p>');
-  const body = $('#qtable tbody');
-  let at = FIRST;
-  const more = () => {
-    if (QV.token !== token || at >= rows.length) return;
-    body.insertAdjacentHTML('beforeend', rows.slice(at, at + SLICE).map(row).join(''));
-    at += SLICE;
+    const row = r => (typeof r === 'function' ? r() : r);
+    // first screenful at once, the rest in slices so switching to this tab never blocks for long
+    const FIRST = 40, SLICE = 120, token = QV.token = {};
+    const box = $('#qrows');
+    box.innerHTML = rows.slice(0, FIRST).map(row).join('') + (qs.length ? '' : '<p class="muted small" style="padding:6px 12px">没有符合条件的题目。</p>');
+    let at = FIRST;
+    const more = () => {
+      if (QV.token !== token || at >= rows.length) return;
+      box.insertAdjacentHTML('beforeend', rows.slice(at, at + SLICE).map(row).join(''));
+      at += SLICE;
+      setTimeout(more, 0);
+    };
     setTimeout(more, 0);
-  };
-  setTimeout(more, 0);
+  }
+  if (QV.cur == null || !qById[QV.cur]) QV.cur = QV.list[0] || null;
+  // coming back to the same question with the same list: keep the rendered detail (formulas are slow in WebKitGTK)
+  const key = QV.cur + '|' + sig;
+  if ($('#qDetail').dataset.key !== key) { $('#qDetail').dataset.key = key; renderQDetail(); }
 }
+function renderQDetail() {
+  const el = $('#qDetail');
+  $$('#qrows .qrow.cur').forEach(r => r.classList.remove('cur'));
+  const q = qById[QV.cur];
+  if (!q) { el.innerHTML = '<p class="muted" style="text-align:center;margin-top:60px">从左侧选择一道题。</p>'; return; }
+  const row = $(`#qrows .qrow[data-qsel="${q.id}"]`);
+  if (row) { row.classList.add('cur'); row.scrollIntoView({ block: 'nearest' }); }
+  markSeen(q.id);
+  const x = qSections(q, null);
+  const pos = QV.list.indexOf(q.id);
+  const tabs = [['steps', '解题', `${q.steps.length} 步`], ['topics', '考点', q.to.length || ''], ['notes', '备注', x.nNotes || '']].filter(t => t[0] !== 'notes' || x.nNotes);
+  const tab = tabs.some(t => t[0] === QV.tab) ? QV.tab : 'steps';
+  el.innerHTML = `<div class="kpd qbox" data-tab="${tab}">
+    <div class="kpd-top"><button class="icon" data-qlist title="收起或展开左侧列表（L）">${QV.nolist ? '☰ 列表' : '⇤ 收起列表'}</button>
+      <span class="crumb muted small">${q.sub === 'LA' ? '线性代数' : '高等数学'} · ${TYPE[q.ty]}题</span>
+      ${starBtn(q.id, ' 标记')}${x.selftest}
+      ${pos >= 0 ? `<span class="kp-nav"><button class="icon" data-qstep="-1" ${pos > 0 ? '' : 'disabled'} title="上一题（↑ / ←）">↑</button><span class="muted small">${pos + 1} / ${QV.list.length}</span><button class="icon" data-qstep="1" ${pos < QV.list.length - 1 ? '' : 'disabled'} title="下一题（↓ / →）">↓</button></span>` : ''}</div>
+    <h1 class="kp-title">${q.y} 年 第 ${esc(q.lb)} 题 ${x.badges}</h1>
+    ${x.stem}${x.reveal}
+    <div class="q-reveal" ${SELFTEST ? 'hidden' : ''}>${x.ans}
+      <nav class="kp-tabs">${tabs.map(([t, l, n], i) => `<button data-qtab="${t}" class="${t === tab ? 'cur' : ''}" title="${l}（${i + 1}）">${l}${n !== '' ? ` <span class="n">${n}</span>` : ''}</button>`).join('')}</nav>
+      <section data-pane="steps"><div class="steps-h q-steps-h">${x.stepsHead}</div>${x.steps}</section>
+      <section data-pane="topics">${x.topics}</section>
+      <section data-pane="notes">${x.notes}</section>
+    </div></div>`;
+  el.scrollTop = 0;
+  math(el);
+}
+function qTab(t) {
+  const d = $('#qDetail .qbox');
+  if (!d || !d.querySelector(`[data-qtab="${t}"]`)) return;
+  QV.tab = t;
+  try { localStorage.setItem('math2viz.qTab', t); } catch (e) { /* ignore */ }
+  d.dataset.tab = t;
+  $$('#qDetail [data-qtab]').forEach(b => b.classList.toggle('cur', b.dataset.qtab === t));
+  const nav = $('#qDetail .kp-tabs'), box = $('#qDetail');
+  if (nav && nav.getBoundingClientRect().top < box.getBoundingClientRect().top + 1) box.scrollTop = nav.offsetTop - box.offsetTop;
+}
+function qList(show) {
+  QV.nolist = !show;
+  try { localStorage.setItem('math2viz.qNoList', QV.nolist ? '1' : '0'); } catch (e) { /* ignore */ }
+  $('#v-questions').classList.toggle('nolist', QV.nolist);
+  const b = $('#qDetail [data-qlist]'); if (b) b.textContent = QV.nolist ? '☰ 列表' : '⇤ 收起列表';
+}
+function qStep(d) {
+  const i = QV.list.indexOf(QV.cur) + d;
+  if (i >= 0 && i < QV.list.length) go('questions', QV.list[i]);
+}
+$('#qList').addEventListener('click', e => { const r = e.target.closest('[data-qsel]'); if (r) go('questions', r.dataset.qsel); });
+$('#qDetail').addEventListener('click', e => {
+  const t = e.target.closest('[data-qtab]'); if (t) return qTab(t.dataset.qtab);
+  if (e.target.closest('[data-qlist]')) return qList(QV.nolist);
+  const st = e.target.closest('[data-qstep]'); if (st) qStep(+st.dataset.qstep);
+});
+$('#v-questions').classList.toggle('nolist', QV.nolist);
+addEventListener('keydown', e => {
+  if (VIEW !== 'questions' || e.ctrlKey || e.metaKey || e.altKey || !$('#modal').hidden) return;
+  if (e.target.closest && e.target.closest('input, select, textarea, [contenteditable]')) return;
+  const k = e.key.toLowerCase();
+  const d = e.key === 'ArrowDown' || e.key === 'ArrowRight' || k === 'j' ? 1 : e.key === 'ArrowUp' || e.key === 'ArrowLeft' || k === 'k' ? -1 : 0;
+  if (d) { e.preventDefault(); qStep(d); }
+  else if (k === 'l') qList(QV.nolist);
+  else if (k === '1' || k === '2' || k === '3') qTab(['steps', 'topics', 'notes'][+k - 1]);
+});
 
 /* ---------- filters & routing ---------- */
 function setYears(a, b) {
@@ -1446,6 +1547,9 @@ function route() {
     CV.cur = k ? k.i : CV.cur;
     renderCardList(); renderCardDetail();
     const cur = $('#cardList .ci.cur'); if (cur) cur.scrollIntoView({ block: 'nearest' });
+  } else if (VIEW === 'questions') {
+    if (arg && qById[arg]) QV.cur = arg;
+    renderQuestions();
   } else if (VIEW === 'graph') {
     if (!$('#graphCtl').innerHTML) initGraphCtl();
     buildGraph();
