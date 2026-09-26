@@ -82,4 +82,7 @@ jobs:
           shopt -s nullglob
           files=( "${{ matrix.bundle }}"/nsis/*.exe "${{ matrix.bundle }}"/msi/*.msi "${{ matrix.bundle }}"/dmg/*.dmg )
           [ ${#files[@]} -gt 0 ] || { echo "no installer produced"; exit 1; }
-          gh release upload "$TAG" "${files[@]}" --repo "$DATA_REPO" --clobber
+          # GitHub drops non-ASCII characters from asset names: rename 数二考点地图_… to math2-map_…
+          mkdir -p upload
+          for f in "${files[@]}"; do b=$(basename "$f"); cp "$f" "upload/math2-map_${b#*_}"; done
+          gh release upload "$TAG" upload/* --repo "$DATA_REPO" --clobber
