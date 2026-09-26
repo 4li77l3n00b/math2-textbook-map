@@ -159,8 +159,16 @@ table.t th { font-weight: 600; color: var(--muted); font-size: 12px; position: s
 .ci:hover, .ci.cur { background: var(--hover); }
 .ci .s { font-size: 11.5px; color: var(--muted); }
 .ci .bars { display: flex; flex-direction: column; gap: 4px; justify-content: center; }
-#cardDetail { flex: 1; padding: 18px 26px 80px; }
-.yearbars { display: block; }
+#cardDetail { flex: 1; padding: 18px 26px 80px; container-type: inline-size; }
+/* knowledge-point page: one reading column of limited width; on wide screens a second column for how it is examined */
+.kpd { max-width: 880px; }
+.kpd-side > h3:first-child { margin-top: 26px; }
+@container (min-width: 1240px) {
+  .kpd { max-width: 1640px; display: grid; grid-template-columns: minmax(0, 800px) minmax(0, 1fr); gap: 0 44px; align-items: start; }
+  .kpd-side { border-left: 1px solid var(--line); padding-left: 32px; }
+  .kpd-side > h3:first-child { margin-top: 4px; }
+}
+.yearbars { display: block; height: auto; }
 
 /* graph */
 #v-graph.on { display: block; }

@@ -327,7 +327,8 @@ function snippet(bi, maxW = 640, maxS = 0.62) {
 function yearChart(topicByYear, toolByYear) {
   const n = Y_MAX - Y_MIN + 1, bw = 14, H2 = 34;
   const mt = Math.max(1, ...Object.values(topicByYear)), mo = Math.max(1, ...Object.values(toolByYear));
-  let s = `<svg class="yearbars" viewBox="0 0 ${n * bw + 30} ${H2 * 2 + 22}" width="100%">`;
+  const vw = n * bw + 30, vh = H2 * 2 + 22;
+  let s = `<svg class="yearbars" viewBox="0 0 ${vw} ${vh}" style="width:${Math.round(vw * 1.15)}px;max-width:100%">`;
   for (let y = Y_MIN; y <= Y_MAX; y++) {
     const x = (y - Y_MIN) * bw + 26, inr = y >= S.y0 && y <= S.y1 ? 1 : 0.3;
     const t = topicByYear[y] || 0, o = toolByYear[y] || 0;
@@ -901,6 +902,8 @@ function renderCardList() {
       <div class="bars">${bar(H.kt[k.i], H.kmax.topic, 'topic')}${bar(H.ko[k.i], H.kmax.tool, 'tool')}</div></div>`).join('');
 }
 $('#cardList').addEventListener('click', e => { const c = e.target.closest('[data-kpsel]'); if (c) go('cards', K[+c.dataset.kpsel].id); });
+// textbook excerpts in the knowledge-point page: up to the reading column's width, a bit above print size
+const SNIP_W = 720, SNIP_S = 0.7;
 function renderCardDetail() {
   const el = $('#cardDetail');
   const k = K[CV.cur];
@@ -919,26 +922,26 @@ function renderCardDetail() {
   const partners = [...co].sort((a, b) => b[1] - a[1]).slice(0, 16);
   const st = kpStBlocks(k);
   const words = [...kpWords[k.i]].sort((a, b) => b[1] - a[1]);
-  el.innerHTML = `<div class="muted small">${esc(D.books[k.bk]?.name || '')} › ${esc(nodePath(k.node))}</div>
+  el.innerHTML = `<div class="kpd"><div class="kpd-main"><div class="muted small">${esc(D.books[k.bk]?.name || '')} › ${esc(nodePath(k.node))}</div>
     <h2><span class="badge muted">${KIND[k.k] || k.k}</span> ${esc(k.n)}</h2>
     <div class="kp-stmt tex">${stmtHtml(k.s)}<button class="copy" data-copy="${k.i}" title="复制这条表述（公式为 LaTeX 源码）">复制</button></div>
     ${statsHtml(H.kt[k.i], H.ktn[k.i], H.ko[k.i], H.kon[k.i])}
     <div class="muted small">全部年份共 ${DF[k.i]} 题用它作工具${IDF[k.i] < 1 ? `（普遍工具，降权系数 ${IDF[k.i].toFixed(2)}）` : ''}</div>
     ${H.kti[k.i] + H.koi[k.i] > 0 ? `<div class="muted small">作为其他知识点的依据，间接热度：考点 ${fmt(H.kti[k.i])} · 工具 ${fmt(H.koi[k.i])}${S.inh ? '（已计入上方热度）' : '（勾选“依据继承热度”可计入）'}</div>` : ''}
     <h3>规范出处：${c ? esc(cardName(c)) : ''} <a class="small" data-read="${st.join(',')}">在书中查看</a></h3>
-    ${st.slice(0, 8).map(b => snippet(b, 560, 0.5)).join('')}${st.length > 8 ? `<p class="muted small">…共 ${st.length} 段</p>` : ''}
+    ${st.slice(0, 8).map(b => snippet(b, SNIP_W, SNIP_S)).join('')}${st.length > 8 ? `<p class="muted small">…共 ${st.length} 段</p>` : ''}
     ${k.m.length ? `<h3>书中其他讲到它的地方（${k.m.length}）</h3>` + k.m.map(([mc, rel]) => {
       const card = D.cards[mc], bl = card.st.length ? card.st : card.sp;
-      return `<details class="member"><summary><span class="badge muted">${KREL[rel] || rel}</span> ${esc(cardName(card))} <span class="muted small">${card.bk !== k.bk ? BOOK_SHORT[card.bk] + ' ' : ''}${esc(nodeName(nodeById[card.n], true))}</span> · <a class="small" data-read="${bl.join(',')}">在书中查看</a></summary>${bl.slice(0, 4).map(b => snippet(b, 560, 0.5)).join('')}</details>`;
+      return `<details class="member"><summary><span class="badge muted">${KREL[rel] || rel}</span> ${esc(cardName(card))} <span class="muted small">${card.bk !== k.bk ? BOOK_SHORT[card.bk] + ' ' : ''}${esc(nodeName(nodeById[card.n], true))}</span> · <a class="small" data-read="${bl.join(',')}">在书中查看</a></summary>${bl.slice(0, 4).map(b => snippet(b, SNIP_W, SNIP_S)).join('')}</details>`;
     }).join('') : ''}
-    ${depsHtml(k)}
-    <h3>历年出现（题型筛选生效，淡色为筛选范围外的年份）</h3>${yearChart(topicY, toolY)}
+    ${depsHtml(k)}</div>
+    <div class="kpd-side"><h3>历年出现 <span class="muted small">题型筛选生效，淡色为筛选范围外的年份</span></h3>${yearChart(topicY, toolY)}
     <h3>共现搭档 <span class="muted small">当前筛选下与它出现在同一题的知识点（${nq} 题）</span></h3>
     ${partners.map(([o, n]) => `<span class="chip" data-kp="${o}">${esc(K[o].n)} <b>${n}</b></span>`).join('') || '<p class="muted small">无</p>'}
     <h3>作为考点（${topic.length}）</h3>${topic.map(x => topicItem(x)).join('') || '<p class="muted small">当前筛选下没有</p>'}
     <h3>作为解题工具（${tool.length}）</h3>${tool.map(x => toolItem(x)).join('') || '<p class="muted small">当前筛选下没有</p>'}
     ${words.length ? `<details><summary class="muted small" style="cursor:pointer;margin-top:14px">真题解答里的原话（${words.length} 种说法）</summary>
-      <div class="small">${words.map(([w, n]) => `<div>${esc(w)} <span class="muted">×${n}</span></div>`).join('')}</div></details>` : ''}`;
+      <div class="small">${words.map(([w, n]) => `<div>${esc(w)} <span class="muted">×${n}</span></div>`).join('')}</div></details>` : ''}</div></div>`;
   el.scrollTop = 0;
   math(el);
 }
