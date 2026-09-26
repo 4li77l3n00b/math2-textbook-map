@@ -324,6 +324,18 @@ function snippet(bi, maxW = 640, maxS = 0.62) {
       `background-position:${(-x0 * s).toFixed(1)}px ${(-y0 * s).toFixed(1)}px"></div>`;
   }).join('');
 }
+// one-line glance of the year chart: tiny bars, topic up / tool down, out-of-range years faded
+function sparkChart(topicByYear, toolByYear) {
+  const n = Y_MAX - Y_MIN + 1, bw = 5, h = 12;
+  const mt = Math.max(1, ...Object.values(topicByYear)), mo = Math.max(1, ...Object.values(toolByYear));
+  let s = `<svg class="spark" viewBox="0 0 ${n * bw} ${2 * h + 1}" width="${n * bw}" height="${2 * h + 1}"><line x1="0" x2="${n * bw}" y1="${h + .5}" y2="${h + .5}" stroke="currentColor" opacity=".18"/>`;
+  for (let y = Y_MIN; y <= Y_MAX; y++) {
+    const x = (y - Y_MIN) * bw, op = y >= S.y0 && y <= S.y1 ? 1 : 0.28, t = topicByYear[y] || 0, o = toolByYear[y] || 0;
+    if (t) s += `<rect x="${x}" y="${h - Math.max(2, h * t / mt)}" width="${bw - 1}" height="${Math.max(2, h * t / mt)}" fill="rgb(${MODE_RGB.topic})" opacity="${op}"/>`;
+    if (o) s += `<rect x="${x}" y="${h + 1}" width="${bw - 1}" height="${Math.max(2, h * o / mo)}" fill="rgb(${MODE_RGB.tool})" opacity="${op}"/>`;
+  }
+  return s + '</svg>';
+}
 function yearChart(topicByYear, toolByYear) {
   const n = Y_MAX - Y_MIN + 1, bw = 14, H2 = 34;
   const mt = Math.max(1, ...Object.values(topicByYear)), mo = Math.max(1, ...Object.values(toolByYear));
@@ -863,7 +875,8 @@ $('#v-overview').addEventListener('click', e => {
 $('#v-overview').addEventListener('change', e => { if (e.target.id === 'ovSort') { OV.sort = e.target.value; renderOverview(); } });
 
 /* ---------- knowledge points ---------- */
-const CV = { q: '', bk: '', kind: 'formal', sort: 'heat', hit: false, cur: null };
+const CV = { q: '', bk: '', kind: 'formal', sort: 'heat', hit: false, cur: null, order: [], tab: 'src', nolist: false };
+try { CV.tab = localStorage.getItem('math2viz.kpTab') || 'src'; CV.nolist = localStorage.getItem('math2viz.kpNoList') === '1'; } catch (e) { /* defaults */ }
 function kpSet(q, basis) {
   const s = new Set();
   if (basis !== 'tool') q.tk.forEach((w, k) => s.add(k));
@@ -895,6 +908,7 @@ function renderCardList() {
     (!CV.hit || kHit(k.i)) && (!words.length || words.every(w => k.search.includes(w))));
   const key = { heat: k => -kHeat(k.i), topic: k => -H.kt[k.i], tool: k => -H.ko[k.i], book: k => k.c }[CV.sort];
   ks.sort((a, b) => key(a) - key(b) || a.c - b.c);
+  CV.order = ks.map(k => k.i);
   const shown = ks.slice(0, 600);
   $('.lst', box).innerHTML = `<div class="muted small" style="padding:6px 12px">${ks.length} 个知识点${ks.length > 600 ? '（显示前 600）' : ''}</div>` +
     shown.map(k => `<div class="ci${CV.cur === k.i ? ' cur' : ''}" data-kpsel="${k.i}"><div><div>${esc(k.n)}</div>
@@ -902,8 +916,42 @@ function renderCardList() {
       <div class="bars">${bar(H.kt[k.i], H.kmax.topic, 'topic')}${bar(H.ko[k.i], H.kmax.tool, 'tool')}</div></div>`).join('');
 }
 $('#cardList').addEventListener('click', e => { const c = e.target.closest('[data-kpsel]'); if (c) go('cards', K[+c.dataset.kpsel].id); });
+function kpTab(t) {
+  CV.tab = t;
+  try { localStorage.setItem('math2viz.kpTab', t); } catch (e) { /* ignore */ }
+  const d = $('#cardDetail .kpd');
+  if (!d) return;
+  d.dataset.tab = t;
+  $$('#cardDetail .kp-tabs [data-kptab]').forEach(b => b.classList.toggle('cur', b.dataset.kptab === t));
+  const nav = $('#cardDetail .kp-tabs'), box = $('#cardDetail');
+  if (nav.getBoundingClientRect().top < box.getBoundingClientRect().top + 1) box.scrollTop = nav.offsetTop - box.offsetTop;
+}
+function kpList(show) {
+  CV.nolist = !show;
+  try { localStorage.setItem('math2viz.kpNoList', CV.nolist ? '1' : '0'); } catch (e) { /* ignore */ }
+  $('#v-cards').classList.toggle('nolist', CV.nolist);
+  const b = $('#cardDetail [data-kplist]'); if (b) b.textContent = CV.nolist ? '☰ 列表' : '⇤ 收起列表';
+}
+function kpStep(d) {
+  const i = CV.order.indexOf(CV.cur) + d;
+  if (i >= 0 && i < CV.order.length) go('cards', K[CV.order[i]].id);
+}
+$('#cardDetail').addEventListener('click', e => {
+  const t = e.target.closest('[data-kptab]'); if (t) return kpTab(t.dataset.kptab);
+  if (e.target.closest('[data-kplist]')) return kpList(CV.nolist);
+  const st = e.target.closest('[data-kpstep]'); if (st) kpStep(+st.dataset.kpstep);
+});
+$('#v-cards').classList.toggle('nolist', CV.nolist);
+addEventListener('keydown', e => {
+  if (VIEW !== 'cards' || e.ctrlKey || e.metaKey || e.altKey || !$('#modal').hidden) return;
+  if (e.target.closest && e.target.closest('input, select, textarea, [contenteditable]')) return;
+  const k = e.key.toLowerCase();
+  if (k === 'j' || k === 'k') { e.preventDefault(); kpStep(k === 'j' ? 1 : -1); }
+  else if (k === 'l') kpList(CV.nolist);
+  else if (k === '1' || k === '2' || k === '3') kpTab(['src', 'dep', 'exam'][+k - 1]);
+});
 // textbook excerpts in the knowledge-point page: up to the reading column's width, a bit above print size
-const SNIP_W = 720, SNIP_S = 0.7;
+const SNIP_W = 700, SNIP_S = 0.7;
 function renderCardDetail() {
   const el = $('#cardDetail');
   const k = K[CV.cur];
@@ -922,26 +970,39 @@ function renderCardDetail() {
   const partners = [...co].sort((a, b) => b[1] - a[1]).slice(0, 16);
   const st = kpStBlocks(k);
   const words = [...kpWords[k.i]].sort((a, b) => b[1] - a[1]);
-  el.innerHTML = `<div class="kpd"><div class="kpd-main"><div class="muted small">${esc(D.books[k.bk]?.name || '')} › ${esc(nodePath(k.node))}</div>
-    <h2><span class="badge muted">${KIND[k.k] || k.k}</span> ${esc(k.n)}</h2>
+  const pos = CV.order.indexOf(k.i), rng = S.y0 === S.y1 ? `${S.y0} 年` : `${S.y0}–${S.y1}`;
+  const nDep = k.d.length + k.u.length, nExam = topic.length + tool.length;
+  const tabs = [['src', '原文', st.length ? `${st.length} 段` : ''], ['dep', '推导', nDep || ''], ['exam', '真题', nExam || '']];
+  // reading-first: title, statement and a one-line summary; everything else sits behind three tabs
+  el.innerHTML = `<div class="kpd" data-tab="${CV.tab}">
+    <div class="kpd-top"><button class="icon" data-kplist title="收起或展开左侧列表（L）">${CV.nolist ? '☰ 列表' : '⇤ 收起列表'}</button>
+      <span class="crumb muted small" title="${esc(D.books[k.bk]?.name || '')} › ${esc(nodePath(k.node))}">${esc(BOOK_SHORT[k.bk] || '')} › ${esc(nodePath(k.node))}</span>
+      ${pos >= 0 ? `<span class="kp-nav"><button class="icon" data-kpstep="-1" ${pos > 0 ? '' : 'disabled'} title="上一个（K）">↑</button><span class="muted small">${pos + 1} / ${CV.order.length}</span><button class="icon" data-kpstep="1" ${pos < CV.order.length - 1 ? '' : 'disabled'} title="下一个（J）">↓</button></span>` : ''}</div>
+    <h1 class="kp-title">${esc(k.n)} <span class="badge muted">${KIND[k.k] || k.k}</span></h1>
     <div class="kp-stmt tex">${stmtHtml(k.s)}<button class="copy" data-copy="${k.i}" title="复制这条表述（公式为 LaTeX 源码）">复制</button></div>
-    ${statsHtml(H.kt[k.i], H.ktn[k.i], H.ko[k.i], H.kon[k.i])}
-    <div class="muted small">全部年份共 ${DF[k.i]} 题用它作工具${IDF[k.i] < 1 ? `（普遍工具，降权系数 ${IDF[k.i].toFixed(2)}）` : ''}</div>
-    ${H.kti[k.i] + H.koi[k.i] > 0 ? `<div class="muted small">作为其他知识点的依据，间接热度：考点 ${fmt(H.kti[k.i])} · 工具 ${fmt(H.koi[k.i])}${S.inh ? '（已计入上方热度）' : '（勾选“依据继承热度”可计入）'}</div>` : ''}
-    <h3>规范出处：${c ? esc(cardName(c)) : ''} <a class="small" data-read="${st.join(',')}">在书中查看</a></h3>
-    ${st.slice(0, 8).map(b => snippet(b, SNIP_W, SNIP_S)).join('')}${st.length > 8 ? `<p class="muted small">…共 ${st.length} 段</p>` : ''}
-    ${k.m.length ? `<h3>书中其他讲到它的地方（${k.m.length}）</h3>` + k.m.map(([mc, rel]) => {
-      const card = D.cards[mc], bl = card.st.length ? card.st : card.sp;
-      return `<details class="member"><summary><span class="badge muted">${KREL[rel] || rel}</span> ${esc(cardName(card))} <span class="muted small">${card.bk !== k.bk ? BOOK_SHORT[card.bk] + ' ' : ''}${esc(nodeName(nodeById[card.n], true))}</span> · <a class="small" data-read="${bl.join(',')}">在书中查看</a></summary>${bl.slice(0, 4).map(b => snippet(b, SNIP_W, SNIP_S)).join('')}</details>`;
-    }).join('') : ''}
-    ${depsHtml(k)}</div>
-    <div class="kpd-side"><h3>历年出现 <span class="muted small">题型筛选生效，淡色为筛选范围外的年份</span></h3>${yearChart(topicY, toolY)}
-    <h3>共现搭档 <span class="muted small">当前筛选下与它出现在同一题的知识点（${nq} 题）</span></h3>
-    ${partners.map(([o, n]) => `<span class="chip" data-kp="${o}">${esc(K[o].n)} <b>${n}</b></span>`).join('') || '<p class="muted small">无</p>'}
-    <h3>作为考点（${topic.length}）</h3>${topic.map(x => topicItem(x)).join('') || '<p class="muted small">当前筛选下没有</p>'}
-    <h3>作为解题工具（${tool.length}）</h3>${tool.map(x => toolItem(x)).join('') || '<p class="muted small">当前筛选下没有</p>'}
-    ${words.length ? `<details><summary class="muted small" style="cursor:pointer;margin-top:14px">真题解答里的原话（${words.length} 种说法）</summary>
-      <div class="small">${words.map(([w, n]) => `<div>${esc(w)} <span class="muted">×${n}</span></div>`).join('')}</div></details>` : ''}</div></div>`;
+    <div class="kp-meta" data-kptab="exam" title="查看真题（3）">
+      <span class="stat topic">考点 <b>${H.ktn[k.i]}</b> 题</span><span class="stat tool">工具 <b>${H.kon[k.i]}</b> 题</span>
+      <span class="muted small">${rng}</span>${sparkChart(topicY, toolY)}</div>
+    <nav class="kp-tabs">${tabs.map(([t, l, n], x) => `<button data-kptab="${t}" class="${t === CV.tab ? 'cur' : ''}" title="${l}（${x + 1}）">${l}${n !== '' ? ` <span class="n">${n}</span>` : ''}</button>`).join('')}</nav>
+    <section data-pane="src">
+      <h3>规范出处：${c ? esc(cardName(c)) : ''} <a class="small" data-read="${st.join(',')}">在书中查看</a></h3>
+      ${st.slice(0, 8).map(b => snippet(b, SNIP_W, SNIP_S)).join('')}${st.length > 8 ? `<p class="muted small">…共 ${st.length} 段</p>` : ''}
+      ${k.m.length ? `<h3>书中其他讲到它的地方（${k.m.length}）</h3>` + k.m.map(([mc, rel]) => {
+        const card = D.cards[mc], bl = card.st.length ? card.st : card.sp;
+        return `<details class="member"><summary><span class="badge muted">${KREL[rel] || rel}</span> ${esc(cardName(card))} <span class="muted small">${card.bk !== k.bk ? BOOK_SHORT[card.bk] + ' ' : ''}${esc(nodeName(nodeById[card.n], true))}</span> · <a class="small" data-read="${bl.join(',')}">在书中查看</a></summary>${bl.slice(0, 4).map(b => snippet(b, SNIP_W, SNIP_S)).join('')}</details>`;
+      }).join('') : ''}
+    </section>
+    <section data-pane="dep">${depsHtml(k)}</section>
+    <section data-pane="exam">
+      <div class="kp-heat muted small">${rng}热度：考点 ${fmt(H.kt[k.i])} · 工具 ${fmt(H.ko[k.i])}；全部年份共 ${DF[k.i]} 题用它作工具${IDF[k.i] < 1 ? `（普遍工具，降权系数 ${IDF[k.i].toFixed(2)}）` : ''}${H.kti[k.i] + H.koi[k.i] > 0 ? `；作为其他知识点的依据，间接热度考点 ${fmt(H.kti[k.i])} · 工具 ${fmt(H.koi[k.i])}${S.inh ? '（已计入）' : '（勾选“依据继承热度”可计入）'}` : ''}</div>
+      <h3>历年出现 <span class="muted small">淡色为筛选范围外的年份</span></h3>${yearChart(topicY, toolY)}
+      <h3>作为考点（${topic.length}）</h3>${topic.map(x => topicItem(x)).join('') || '<p class="muted small">当前筛选下没有</p>'}
+      <h3>作为解题工具（${tool.length}）</h3>${tool.map(x => toolItem(x)).join('') || '<p class="muted small">当前筛选下没有</p>'}
+      <h3>常一起出现 <span class="muted small">与它同题出现的知识点（${nq} 题）</span></h3>
+      ${partners.slice(0, 10).map(([o, n]) => `<span class="chip" data-kp="${o}">${esc(K[o].n)} <b>${n}</b></span>`).join('') || '<p class="muted small">无</p>'}
+      ${words.length ? `<details class="words"><summary class="muted small">真题解答里的原话（${words.length} 种说法）</summary>
+        <div class="small">${words.map(([w, n]) => `<div>${esc(w)} <span class="muted">×${n}</span></div>`).join('')}</div></details>` : ''}
+    </section></div>`;
   el.scrollTop = 0;
   math(el);
 }
