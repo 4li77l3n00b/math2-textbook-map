@@ -27,3 +27,4 @@ node_modules/
 *.log
 app/src-tauri/target/
 app/src-tauri/gen/
+dist/
