@@ -14,12 +14,15 @@
 <header id="top">
   <div class="brand">数二考点地图</div>
   <nav id="tabs">
-    <a data-view="read">教材阅读</a>
-    <a data-view="overview">全书总览</a>
-    <a data-view="cards">知识点</a>
-    <a data-view="graph">关联图</a>
-    <a data-view="blind">盲区</a>
-    <a data-view="questions">真题</a>
+    <a data-view="read" title="教材阅读（Alt+1）">教材阅读</a>
+    <a data-view="cards" title="知识点（Alt+2）">知识点</a>
+    <a data-view="questions" title="真题（Alt+3）">真题</a>
+    <span class="more" title="数据可视化">
+      <span class="lbl">图表</span>
+      <a data-view="overview" title="全书总览：各章节的考点 / 工具热度（Alt+4）">全书总览</a>
+      <a data-view="graph" title="关联图：知识点共现与推导关系（Alt+5）">关联图</a>
+      <a data-view="blind" title="盲区：书中没有讲到的考点与工具（Alt+6）">盲区</a>
+    </span>
   </nav>
   <div id="filters">
     <span class="grp">
@@ -42,9 +45,11 @@
       <button data-mode="topic" title="题目设计上要考查的知识（topics：主考点 1，次考点 0.5）">考点热度</button>
       <button data-mode="tool" title="解题时用到的知识（citations：核心 3，辅助 1.5，前置 0.5）">工具热度</button>
     </span>
-    <label class="grp" title="同一结论在书中多处出现（正式陈述、复述、推导它的例题）时，热度都记到首次正式陈述它的地方"><input type="checkbox" id="merge" checked>归到规范出处</label>
-    <label class="grp" title="题目用到一个知识点时，它的推导依据也按 0.3 计入热度（隔一层 0.09，不超过直接权重）；“考过几题”只算直接用到的"><input type="checkbox" id="inh">依据继承热度</label>
-    <label class="grp" id="idfwrap" title="被大量题目使用的工具（如牛顿-莱布尼茨公式）按使用面降权，突出有区分度的工具"><input type="checkbox" id="idf" checked>普遍工具降权</label>
+    <details class="grp heatopts" id="heatopts"><summary title="热度的计算方式">热度选项</summary><div class="pop">
+      <label title="同一结论在书中多处出现（正式陈述、复述、推导它的例题）时，热度都记到首次正式陈述它的地方"><input type="checkbox" id="merge" checked>归到规范出处<span class="muted small">同一结论的多处出现，热度记到首次正式陈述处</span></label>
+      <label title="题目用到一个知识点时，它的推导依据也按 0.3 计入热度（隔一层 0.09，不超过直接权重）；“考过几题”只算直接用到的"><input type="checkbox" id="inh">依据继承热度<span class="muted small">用到一个知识点时，它的推导依据也按 0.3 计入</span></label>
+      <label id="idfwrap" title="被大量题目使用的工具（如牛顿-莱布尼茨公式）按使用面降权，突出有区分度的工具"><input type="checkbox" id="idf" checked>普遍工具降权<span class="muted small">被大量题目使用的工具按使用面降权</span></label>
+    </div></details>
     <span id="qcount" class="muted"></span>
   </div>
 </header>

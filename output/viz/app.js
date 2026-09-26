@@ -996,6 +996,7 @@ addEventListener('keydown', e => {
 const SNIP_W = 700, SNIP_S = 0.7;
 function renderCardDetail() {
   const el = $('#cardDetail');
+  if (CV.cur == null && CV.order.length) CV.cur = CV.order[0];  // nothing chosen yet: open the top of the list
   const k = K[CV.cur];
   if (!k) { el.innerHTML = '<p class="muted">从左侧选择一个知识点。</p>'; return; }
   const c = D.cards[k.c];
@@ -1545,6 +1546,7 @@ function route() {
   VIEW = ['read', 'overview', 'cards', 'graph', 'blind', 'questions'].includes(v) ? v : 'read';
   $$('.view').forEach(el => el.classList.toggle('on', el.id === 'v-' + VIEW));
   $$('#tabs a').forEach(a => a.classList.toggle('on', a.dataset.view === VIEW));
+  document.body.dataset.view = VIEW;
   hideTip();
   if (VIEW === 'read') {
     const bk = BOOKS.includes(arg) ? arg : (R.bk || 'GS1');
@@ -1567,6 +1569,14 @@ function route() {
 }
 $('#tabs').addEventListener('click', e => { const a = e.target.closest('a'); if (a) go(a.dataset.view, a.dataset.view === 'read' ? R.bk : (a.dataset.view === 'cards' && CV.cur != null ? K[CV.cur].id : '')); });
 addEventListener('hashchange', route);
+// Alt+1…6: the pages in menu order
+addEventListener('keydown', e => {
+  if (!e.altKey || e.ctrlKey || e.metaKey || !/^Digit[1-6]$/.test(e.code)) return;
+  const a = $$('#tabs a')[+e.code.slice(5) - 1];
+  if (a) { e.preventDefault(); closeModal(); a.click(); }
+});
+// close the heat-options popover when clicking elsewhere
+document.addEventListener('click', e => { const d = $('#heatopts'); if (d && d.open && !e.target.closest('#heatopts')) d.open = false; });
 
 compute(); syncFilterUi(); route();
 
