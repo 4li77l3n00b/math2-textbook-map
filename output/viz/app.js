@@ -476,7 +476,15 @@ document.addEventListener('change', e => {
   SELFTEST = e.target.checked;
   try { localStorage.setItem('math2viz.selftest', SELFTEST ? '1' : '0'); } catch (err) { /* ignore */ }
   $$('[data-selftest]').forEach(c => { c.checked = SELFTEST; });
-  if (!SELFTEST) $$('.qbox').forEach(r => { const v = r.querySelector('.q-reveal'); if (v) v.hidden = false; r.querySelectorAll('[data-reveal]').forEach(b => b.remove()); });
+  document.body.classList.toggle('selftest', SELFTEST);
+  // apply to the question already on screen too: hide everything past the stem behind a reveal button, or show it again
+  $$('.qbox').forEach(r => {
+    const v = r.querySelector('.q-reveal');
+    if (!v) return;
+    r.querySelectorAll('[data-reveal]').forEach(b => b.remove());
+    v.hidden = SELFTEST;
+    if (SELFTEST) v.insertAdjacentHTML('beforebegin', '<button class="reveal-btn" data-reveal>显示答案、解析与考查主题</button>');
+  });
 });
 function stepQuestion(d) {
   const i = QNAV.ids.indexOf($('#modal').dataset.cur) + d;
@@ -1335,6 +1343,7 @@ const store = {
 const MARK = store.get('marks'), SEEN = store.get('seen');
 let SELFTEST = false;
 try { SELFTEST = localStorage.getItem('math2viz.selftest') === '1'; } catch (e) { /* default */ }
+document.body.classList.toggle('selftest', SELFTEST);
 function toggleMark(id) {
   if (MARK.has(id)) MARK.delete(id); else MARK.add(id);
   store.put('marks', MARK);
