@@ -1,0 +1,6 @@
+{
+  "identifier": "default",
+  "description": "the page only needs to render; no native APIs",
+  "windows": ["main"],
+  "permissions": []
+}

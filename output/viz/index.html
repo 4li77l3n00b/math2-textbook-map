@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>数二考点地图</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="vendor/katex/katex.min.css" onerror="this.remove()">
+<link rel="preload" href="vendor/katex/fonts/KaTeX_Main-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="vendor/katex/fonts/KaTeX_Math-Italic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header id="top">
+  <div class="brand">数二考点地图</div>
+  <nav id="tabs">
+    <a data-view="read">教材阅读</a>
+    <a data-view="overview">全书总览</a>
+    <a data-view="cards">知识点</a>
+    <a data-view="graph">关联图</a>
+    <a data-view="blind">盲区</a>
+    <a data-view="questions">真题</a>
+  </nav>
+  <div id="filters">
+    <span class="grp">
+      <button class="icon" id="yprev" title="年份区间整体前移一年">◀</button>
+      <select id="y0"></select><span class="dash">–</span><select id="y1"></select>
+      <button class="icon" id="ynext" title="年份区间整体后移一年">▶</button>
+      <span class="presets">
+        <button data-preset="all">全部</button>
+        <button data-preset="5">近5年</button>
+        <button data-preset="10">近10年</button>
+        <button data-preset="20">近20年</button>
+      </span>
+    </span>
+    <span class="grp chips" id="types">
+      <label><input type="checkbox" value="x" checked>选择</label>
+      <label><input type="checkbox" value="t" checked>填空</label>
+      <label><input type="checkbox" value="j" checked>解答</label>
+    </span>
+    <span class="grp seg" id="mode">
+      <button data-mode="topic" title="题目设计上要考查的知识（topics：主考点 1，次考点 0.5）">考点热度</button>
+      <button data-mode="tool" title="解题时用到的知识（citations：核心 3，辅助 1.5，前置 0.5）">工具热度</button>
+    </span>
+    <label class="grp" title="同一结论在书中多处出现（正式陈述、复述、推导它的例题）时，热度都记到首次正式陈述它的地方"><input type="checkbox" id="merge" checked>归到规范出处</label>
+    <label class="grp" title="题目用到一个知识点时，它的推导依据也按 0.3 计入热度（隔一层 0.09，不超过直接权重）；“考过几题”只算直接用到的"><input type="checkbox" id="inh">依据继承热度</label>
+    <label class="grp" id="idfwrap" title="被大量题目使用的工具（如牛顿-莱布尼茨公式）按使用面降权，突出有区分度的工具"><input type="checkbox" id="idf" checked>普遍工具降权</label>
+    <span id="qcount" class="muted"></span>
+  </div>
+</header>
+<main id="main">
+  <section id="v-read" class="view">
+    <aside id="toc">
+      <div class="seg" id="bookTabs"></div>
+      <div id="tocCtl"></div>
+      <div id="tocTree"></div>
+    </aside>
+    <div id="pagesWrap"><div id="pages"></div>
+      <div id="jumpbar"><button id="jprev" title="上一处有引用的内容（K）">◀ 上一处</button><span id="jpos" class="muted small"></span><button id="jnext" title="下一处有引用的内容（J）">下一处 ▶</button>
+        <select id="jscope" title="跳转范围（按当前热度模式和筛选）"><option value="all">全部有引用</option><option value="0.5">热度前 50%</option><option value="0.2">热度前 20%</option></select>
+        <span class="muted small" title="键盘：J 下一处，K 上一处">J / K</span></div></div>
+    <div id="minimap" title="全书热度分布：点击跳转"></div>
+    <aside id="side" class="panel"></aside>
+  </section>
+  <section id="v-overview" class="view scroll"></section>
+  <section id="v-cards" class="view">
+    <aside id="cardList" class="panel"></aside>
+    <div id="cardDetail" class="panel scroll"></div>
+  </section>
+  <section id="v-graph" class="view">
+    <div id="graphCtl" class="toolbar"></div>
+    <canvas id="graph"></canvas>
+    <aside id="graphSide" class="panel"></aside>
+  </section>
+  <section id="v-blind" class="view scroll"></section>
+  <section id="v-questions" class="view scroll"></section>
+</main>
+<div id="modal" hidden><div class="box"><div class="content"></div></div></div>
+<div id="tip" hidden></div>
+<script src="vendor/katex/katex.min.js"></script>
+<script src="vendor/katex/contrib/auto-render.min.js"></script>
+<script src="plain2tex.js"></script>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

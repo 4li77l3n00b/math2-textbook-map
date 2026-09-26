@@ -1,0 +1,29 @@
+# 公开仓库只放代码。数据（output/ 下的映射、教材索引、可视化数据与页面图等）在私有仓库
+# math2-textbook-map-data，用 scripts/data_git.sh 管理。
+.git-data/
+.git-old-backup/
+
+# local secrets / tool config
+.codex/
+.claude/
+# original materials
+source/
+tmp/
+
+# output/: only the viz front-end code is public
+output/*
+!output/viz/
+output/viz/*
+!output/viz/index.html
+!output/viz/app.js
+!output/viz/style.css
+!output/viz/plain2tex.js
+!output/viz/vendor/
+
+# caches, logs, build outputs
+__pycache__/
+*.pyc
+node_modules/
+*.log
+app/src-tauri/target/
+app/src-tauri/gen/

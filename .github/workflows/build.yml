@@ -1,0 +1,85 @@
+# 构建桌面应用安装包（Windows：NSIS + MSI；macOS：通用 DMG，未签名）。
+# 本仓库只有代码；可视化数据（data.js、教材页面图）在私有仓库 math2-textbook-map-data，构建时用
+# secrets.DATA_TOKEN（只授权该仓库 Contents 读写的细粒度令牌）拉取。安装包含教材内容，因此不作为本仓库的
+# 公开 artifact，而是上传到私有数据仓库的 Release（标签 build-<运行序号>）。
+# 手动触发：gh workflow run build.yml
+name: build-installers
+
+on:
+  workflow_dispatch:
+
+env:
+  DATA_REPO: 4li77l3n00b/math2-textbook-map-data
+  TAG: build-${{ github.run_number }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: create release in the private data repo
+        env:
+          GH_TOKEN: ${{ secrets.DATA_TOKEN }}
+        run: gh release create "$TAG" --repo "$DATA_REPO" --title "安装包 $TAG" --notes "由 ${{ github.repository }} 的 Actions 运行 ${{ github.run_id }} 构建（${{ github.sha }}）"
+
+  build:
+    needs: release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            args: --bundles nsis,msi
+            rust_targets: ''
+            bundle: app/src-tauri/target/release/bundle
+          - os: macos-latest
+            args: --target universal-apple-darwin --bundles dmg
+            rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
+            bundle: app/src-tauri/target/universal-apple-darwin/release/bundle
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: fetch visualization data (private)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.DATA_REPO }}
+          token: ${{ secrets.DATA_TOKEN }}
+          path: data
+          sparse-checkout: |
+            viz/data.js
+            viz/pages
+          sparse-checkout-cone-mode: false
+
+      - name: put data next to the front-end code
+        shell: bash
+        run: cp -r data/viz/data.js data/viz/pages output/viz/ && rm -rf data
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_targets }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: app/src-tauri
+
+      - working-directory: app
+        run: npm ci --no-fund --no-audit
+
+      - working-directory: app
+        run: npx tauri build ${{ matrix.args }}
+
+      - name: upload installers to the private release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.DATA_TOKEN }}
+        run: |
+          shopt -s nullglob
+          files=( "${{ matrix.bundle }}"/nsis/*.exe "${{ matrix.bundle }}"/msi/*.msi "${{ matrix.bundle }}"/dmg/*.dmg )
+          [ ${#files[@]} -gt 0 ] || { echo "no installer produced"; exit 1; }
+          gh release upload "$TAG" "${files[@]}" --repo "$DATA_REPO" --clobber

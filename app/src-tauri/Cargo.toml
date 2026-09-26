@@ -1,0 +1,16 @@
+[package]
+name = "math2-map"
+version = "0.1.0"
+description = "数二考点地图（离线）"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+
+[profile.release]
+strip = true
+lto = true
+opt-level = "s"
