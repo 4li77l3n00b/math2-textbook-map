@@ -6,12 +6,17 @@
 //   node scripts/steps_tex.cjs show N [SIZE]   print batch N of the candidates not written yet (default 60 steps)
 //   node scripts/steps_tex.cjs check           parse every written step with KaTeX, list errors / unknown ids
 //   node scripts/steps_tex.cjs build           merge -> output/mapping/steps_tex.json {qid: {n: tex}}
+// Polished wording (also written by Claude): output/mapping/steps_polish/p*.txt, same format, covers every step and
+// overrides steps_tex in build. The mapping's original descriptions in output/mapping/final stay untouched.
+//   node scripts/steps_tex.cjs pplan [CHARS]    split all questions into batches of about CHARS characters -> plan.json
+//   node scripts/steps_tex.cjs pshow N          print batch N (current text: steps_tex, else the original description)
 const fs = require('fs'), path = require('path');
 const root = path.resolve(__dirname, '..');
 const DIR = path.join(root, 'output/mapping/steps_tex');
 globalThis.katex = require(path.join(root, 'output/viz/vendor/katex/katex.min.js'));
 const plain2tex = require(path.join(root, 'output/viz/plain2tex.js'));
 const FINAL = path.join(root, 'output/mapping/final');
+const PDIR = path.join(root, 'output/mapping/steps_polish');
 
 function steps() {
   const out = [];
@@ -21,10 +26,11 @@ function steps() {
   }
   return out;
 }
-function written() {
+function written(dir = DIR) {
   const map = {};
-  for (const f of fs.readdirSync(DIR).filter(f => f.endsWith('.txt')).sort()) {
-    const lines = fs.readFileSync(path.join(DIR, f), 'utf8').split('\n');
+  if (!fs.existsSync(dir)) return map;
+  for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.txt')).sort()) {
+    const lines = fs.readFileSync(path.join(dir, f), 'utf8').split('\n');
     let cur = null;
     for (const line of lines) {
       const m = /^@(math2-\S+) (\d+)\s*$/.exec(line);
@@ -56,7 +62,8 @@ if (cmd === 'todo') {
   console.log(`# ${left.length} left; batch ${n}: ${batch.length} steps`);
   for (const id of batch) console.log(`@${id}\n${all[id]}`);
 } else if (cmd === 'check') {
-  const done = written(), all = Object.fromEntries(steps().map(s => [s.id, s.d]));
+  const polish = process.argv.includes('--polish');
+  const done = written(polish ? PDIR : DIR), all = Object.fromEntries(steps().map(s => [s.id, s.d]));
   let bad = 0;
   for (const [id, { file, tex }] of Object.entries(done)) {
     if (!(id in all)) { console.log('unknown step', id, file); bad++; continue; }
@@ -67,16 +74,38 @@ if (cmd === 'todo') {
     }
     const strip = t => t.replace(/\$[^$]*\$/g, '').replace(/[\s，。；：、]/g, '');
     const cjkA = strip(all[id]).replace(/[^一-鿿]/g, ''), cjkB = strip(tex).replace(/[^一-鿿]/g, '');
-    if (cjkA !== cjkB && Math.abs(cjkA.length - cjkB.length) > 2) console.log('  ≠ wording changed?', id, cjkA.length, cjkB.length);
+    if (!polish && cjkA !== cjkB && Math.abs(cjkA.length - cjkB.length) > 2) console.log('  ≠ wording changed?', id, cjkA.length, cjkB.length);
+  }
+  if (polish) {
+    const ids = Object.keys(all), miss = ids.filter(id => !done[id]);
+    console.log(`${ids.length - miss.length}/${ids.length} polished, ${bad} problems`);
+    return;
   }
   const todo = JSON.parse(fs.readFileSync(path.join(DIR, 'todo.json'), 'utf8'));
   console.log(`${Object.keys(done).length} written (${todo.filter(id => done[id]).length}/${todo.length} candidates), ${bad} problems`);
 } else if (cmd === 'build') {
   const out = {};
-  for (const [id, { tex }] of Object.entries(written())) {
+  for (const [id, { tex }] of Object.entries({ ...written(), ...written(PDIR) })) {
     const [q, n] = id.split(' ');
     (out[q] ||= {})[n] = tex;
   }
   fs.writeFileSync(path.join(root, 'output/mapping/steps_tex.json'), JSON.stringify(out, null, 0));
   console.log(Object.values(out).reduce((a, x) => a + Object.keys(x).length, 0), 'steps in output/mapping/steps_tex.json');
-} else console.log(fs.readFileSync(__filename, 'utf8').split('\n').slice(0, 8).join('\n'));
+} else if (cmd === 'pplan') {
+  const cur = written(), size = +(process.argv[3] || 16000), plan = [];
+  let batch = [], len = 0, q0 = null;
+  for (const s of steps()) {
+    if (s.q !== q0 && len >= size) { plan.push(batch); batch = []; len = 0; }
+    q0 = s.q; batch.push(s.id); len += (cur[s.id]?.tex || s.d).length;
+  }
+  if (batch.length) plan.push(batch);
+  fs.mkdirSync(PDIR, { recursive: true });
+  fs.writeFileSync(path.join(PDIR, 'plan.json'), JSON.stringify(plan));
+  console.log(plan.length, 'batches');
+} else if (cmd === 'pshow') {
+  const plan = JSON.parse(fs.readFileSync(path.join(PDIR, 'plan.json'), 'utf8')), cur = written();
+  const all = Object.fromEntries(steps().map(s => [s.id, s.d]));
+  const n = +process.argv[3];
+  console.log(`# batch ${n}/${plan.length - 1}: ${plan[n].length} steps`);
+  for (const id of plan[n]) console.log(`@${id}\n${cur[id]?.tex || all[id]}`);
+} else console.log(fs.readFileSync(__filename, 'utf8').split('\n').slice(0, 12).join('\n'));
