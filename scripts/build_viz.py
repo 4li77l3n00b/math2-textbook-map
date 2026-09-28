@@ -175,7 +175,14 @@ def cmd_data():
                       'ti': n['title'], 'bk': n['id'].split('/')[0], 'pdf': n.get('pdf_page') or (anchor or {}).get('pdf_page'),
                       'in': in_scope(n['id']), 'ab': bidx.get(order.get(n.get('anchor') or ''))})
 
-    card_list = sorted(cards)
+    # book order: position of the card's unit in the chapter tree, then of its first block
+    # (sorting the ids as text would put GS2/11 before GS2/7 and LALU/10 before LALU/2)
+    npos = {n['id']: i for i, n in enumerate(nodes)}
+
+    def book_pos(cid):
+        blocks = [bidx[u] for u in card_blocks[cid][0] + card_blocks[cid][1] if u in bidx]
+        return (npos.get(cards[cid]['unit'], len(npos)), min(blocks, default=0), cid)
+    card_list = sorted(cards, key=book_pos)
     cidx = {c: k for k, c in enumerate(card_list)}
     card_out = []
     for cid in card_list:
