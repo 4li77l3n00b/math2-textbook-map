@@ -6,14 +6,19 @@
   --k-def: #1f5fbf; --k-def-bg: #e3edfb; --k-thm: #b4442a; --k-thm-bg: #f8e4de; --k-for: #7a3fb0; --k-for-bg: #efe5f8;
   --k-pro: #0f7a6c; --k-pro-bg: #dcf1ed; --k-met: #3d7a1c; --k-met-bg: #e4f2da; --k-con: #5b6470; --k-con-bg: #e9ebee;
   --k-ex: #8a6d1a; --k-ex-bg: #f5eed8;
-  font-size: 14px;
+  font-size: 14px; color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root { --bg: #17181a; --panel: #1f2023; --ink: #e6e6e3; --muted: #9a9ea5; --line: #34363a; --hover: #2a2c30;
           --accent: #f08a6a; --sel: #fff; --page: #ddd;
           --k-def: #8db8f5; --k-def-bg: #1d2c42; --k-thm: #f39c80; --k-thm-bg: #3d2520; --k-for: #c9a2ef; --k-for-bg: #33253f;
           --k-pro: #6fd3c2; --k-pro-bg: #183633; --k-met: #9fd67c; --k-met-bg: #243519; --k-con: #b3bac3; --k-con-bg: #2c2f34;
-          --k-ex: #e0c170; --k-ex-bg: #3a3220; }
+          --k-ex: #e0c170; --k-ex-bg: #3a3220; color-scheme: dark; }
+  /* WebKitGTK (the desktop app) keeps light native scrollbars, so draw dark ones */
+  ::-webkit-scrollbar { width: 11px; height: 11px; background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: #45484e; border-radius: 6px; border: 2px solid var(--bg); }
+  ::-webkit-scrollbar-thumb:hover { background: #5a5e65; }
+  ::-webkit-scrollbar-corner { background: var(--bg); }
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
