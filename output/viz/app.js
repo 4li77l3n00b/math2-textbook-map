@@ -979,6 +979,7 @@ function renderCardList(force) {
       <div class="bars">${bar(H.kt[k.i], H.kmax.topic, 'topic')}${bar(H.ko[k.i], H.kmax.tool, 'tool')}</div></div>`);
   }
   lst.innerHTML = `<div class="muted small" style="padding:6px 12px">${ks.length} 个知识点${ks.length > cap ? `（显示前 ${cap}）` : ''}</div>` + rows.join('');
+  $$('.kch, .ksec', lst).forEach(e => { if (e.textContent.includes('$')) math(e); });  // a few headings carry formulas
 }
 $('#cardList').addEventListener('click', e => { const c = e.target.closest('[data-kpsel]'); if (c) go('cards', K[+c.dataset.kpsel].id); });
 function kpTab(t) {
