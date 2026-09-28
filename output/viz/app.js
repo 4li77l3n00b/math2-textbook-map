@@ -12,6 +12,8 @@ const TYPE = { x: '选择', t: '填空', j: '解答' };
 const ROLE = { c: '核心', a: '辅助', p: '前置' };
 const KIND = { definition: '定义', theorem: '定理', formula: '公式', property: '性质', corollary: '推论', lemma: '引理',
   method: '方法', concept: '概念', example: '例题', remark: '注' };
+// kind as a coloured tag (colours in style.css, .kb-*)
+const kindBadge = k => `<span class="kb kb-${k}">${KIND[k] || k}</span>`;
 const FORMAL = new Set(['definition', 'theorem', 'formula', 'property', 'corollary', 'lemma', 'method', 'concept']);
 const VERDICT = { absent: '书中未见', related: '书中有相近表述', present: '书中有（已补引用）', '': '未复核' };
 const YEARS = [...new Set(D.questions.map(q => q.y))].sort((a, b) => a - b);
@@ -798,7 +800,7 @@ function toolItem({ q, c }, fb) {
     <div class="d"><span class="tex">${esc(c.kp.length ? c.kp.map(k => K[k].n).join('、') : c.k)}</span> — <span>${stepsBrief(q, c.s, 90)}</span></div></div>`;
 }
 function kpRow(k, max, cls = 'ci', attr = 'data-kp') {
-  return `<div class="${cls}" ${attr}="${k.i}"><div><div>${esc(k.n)}</div><div class="s">${BOOK_SHORT[k.bk] || ''} ${esc(nodeName(nodeById[k.node], true))} · ${KIND[k.k] || k.k}${k.m.length ? ` · 另见 ${k.m.length} 处` : ''} · 考点 ${H.ktn[k.i]} · 工具 ${H.kon[k.i]}</div></div><div class="bars">${bar(kHeat(k.i), max)}</div></div>`;
+  return `<div class="${cls}" ${attr}="${k.i}"><div><div class="nm">${kindBadge(k.k)}${esc(k.n)}</div><div class="s">${BOOK_SHORT[k.bk] || ''} ${esc(nodeName(nodeById[k.node], true))}${k.m.length ? ` · 另见 ${k.m.length} 处` : ''} · 考点 ${H.ktn[k.i]} · 工具 ${H.kon[k.i]}</div></div><div class="bars">${bar(kHeat(k.i), max)}</div></div>`;
 }
 function statsHtml(topicHeat, topicN, toolHeat, toolN) {
   return `<div class="kv"><span class="stat topic">考点 <b>${topicN}</b> 题 <span class="muted small">热度 ${fmt(topicHeat)}</span></span>
@@ -898,7 +900,7 @@ function renderTree() {
     const ks = [...n.kps].sort((a, b) => OV.sort === 'heat' ? kHeat(b) - kHeat(a) : 0).filter(k => K[k].in);
     ks.forEach(k => {
       const kp = K[k];
-      out += `<div class="row lv4"><span class="nm" data-kp="${k}"><span class="tw"></span><span class="badge muted">${KIND[kp.k] || kp.k}</span> ${esc(kp.n)}</span>
+      out += `<div class="row lv4"><span class="nm" data-kp="${k}"><span class="tw"></span>${kindBadge(kp.k)}${esc(kp.n)}</span>
         <span class="num">${H.ktn[k] || ''}</span>${bar(H.kt[k], cmax.topic, 'topic')}<span class="num">${H.kon[k] || ''}</span>${bar(H.ko[k], cmax.tool, 'tool')}</div>`;
     });
   };
@@ -931,7 +933,7 @@ K.forEach(k => {
   const cs = [k.c, ...k.m.map(m => m[0])].filter(c => c >= 0).map(c => cardName(D.cards[c]));
   k.search = [k.n, k.s, ...cs, ...kpWords[k.i].keys(), k.node || ''].join(' ').toLowerCase();
 });
-function renderCardList() {
+function renderCardList(force) {
   const box = $('#cardList');
   if (!box.dataset.init) {
     box.dataset.init = 1;
@@ -950,11 +952,33 @@ function renderCardList() {
   const key = { heat: k => -kHeat(k.i), topic: k => -H.kt[k.i], tool: k => -H.ko[k.i], book: k => k.c }[CV.sort];
   ks.sort((a, b) => key(a) - key(b) || a.c - b.c);
   CV.order = ks.map(k => k.i);
-  const shown = ks.slice(0, 600);
-  $('.lst', box).innerHTML = `<div class="muted small" style="padding:6px 12px">${ks.length} 个知识点${ks.length > 600 ? '（显示前 600）' : ''}</div>` +
-    shown.map(k => `<div class="ci${CV.cur === k.i ? ' cur' : ''}" data-kpsel="${k.i}"><div><div>${esc(k.n)}</div>
-      <div class="s">${BOOK_SHORT[k.bk]} ${esc(nodeName(nodeById[k.node], true))} · ${KIND[k.k] || k.k}${k.m.length ? ` · 另见 ${k.m.length} 处` : ''} · 考点 ${H.ktn[k.i]} · 工具 ${H.kon[k.i]}</div></div>
-      <div class="bars">${bar(H.kt[k.i], H.kmax.topic, 'topic')}${bar(H.ko[k.i], H.kmax.tool, 'tool')}</div></div>`).join('');
+  // same list as last time (just picking another point): move the highlight instead of rebuilding up to 1850 rows
+  const lst = $('.lst', box), sig = CV.sort + '|' + CV.order.join(',');
+  if (!force && lst.dataset.sig === sig) {
+    $$('.ci.cur', lst).forEach(e => e.classList.remove('cur'));
+    const c = $(`.ci[data-kpsel="${CV.cur}"]`, lst); if (c) c.classList.add('cur');
+    return;
+  }
+  lst.dataset.sig = sig;
+  // in book order the list reads like the book (all of it, with a sticky chapter heading and a light section line)
+  const book = CV.sort === 'book', cap = book ? Infinity : 600, rows = [];
+  const shown = ks.slice(0, cap);
+  const secOf = k => ancestors(k.node)[1] || '';
+  let ch = null, sec = null;
+  for (const k of shown) {
+    if (book && k.ch !== ch) {
+      ch = k.ch; sec = null;
+      rows.push(`<div class="kch">${BOOK_SHORT[k.bk]} · ${esc(nodeName(nodeById[ch]))} <span class="muted small">${ks.filter(x => x.ch === ch).length} 个</span></div>`);
+    }
+    if (book && secOf(k) !== sec) {
+      sec = secOf(k);
+      if (sec) rows.push(`<div class="ksec">${esc(nodeName(nodeById[sec]))}</div>`);
+    }
+    rows.push(`<div class="ci${CV.cur === k.i ? ' cur' : ''}" data-kpsel="${k.i}"><div><div class="nm">${kindBadge(k.k)}${esc(k.n)}</div>
+      <div class="s">${book ? esc(nodeName(nodeById[k.node], true)) : `${BOOK_SHORT[k.bk]} ${esc(nodeName(nodeById[k.node], true))}`}${k.m.length ? ` · 另见 ${k.m.length} 处` : ''} · 考点 ${H.ktn[k.i]} · 工具 ${H.kon[k.i]}</div></div>
+      <div class="bars">${bar(H.kt[k.i], H.kmax.topic, 'topic')}${bar(H.ko[k.i], H.kmax.tool, 'tool')}</div></div>`);
+  }
+  lst.innerHTML = `<div class="muted small" style="padding:6px 12px">${ks.length} 个知识点${ks.length > cap ? `（显示前 ${cap}）` : ''}</div>` + rows.join('');
 }
 $('#cardList').addEventListener('click', e => { const c = e.target.closest('[data-kpsel]'); if (c) go('cards', K[+c.dataset.kpsel].id); });
 function kpTab(t) {
@@ -1021,7 +1045,7 @@ function renderCardDetail() {
     <div class="kpd-top"><button class="icon" data-kplist title="收起或展开左侧列表（L）">${CV.nolist ? '☰ 列表' : '⇤ 收起列表'}</button>
       <span class="crumb muted small" title="${esc(D.books[k.bk]?.name || '')} › ${esc(nodePath(k.node))}">${esc(BOOK_SHORT[k.bk] || '')} › ${esc(nodePath(k.node))}</span>
       ${pos >= 0 ? `<span class="kp-nav"><button class="icon" data-kpstep="-1" ${pos > 0 ? '' : 'disabled'} title="上一个（↑ / ←）">↑</button><span class="muted small">${pos + 1} / ${CV.order.length}</span><button class="icon" data-kpstep="1" ${pos < CV.order.length - 1 ? '' : 'disabled'} title="下一个（↓ / →）">↓</button></span>` : ''}</div>
-    <h1 class="kp-title">${esc(k.n)} <span class="badge muted">${KIND[k.k] || k.k}</span></h1>
+    <h1 class="kp-title">${esc(k.n)} ${kindBadge(k.k)}</h1>
     <div class="kp-stmt tex">${stmtHtml(k.s)}<button class="copy" data-copy="${k.i}" title="复制这条表述（公式为 LaTeX 源码）">复制</button></div>
     <div class="kp-meta" data-kptab="exam" title="查看真题（3）">
       <span class="stat topic">考点 <b>${H.ktn[k.i]}</b> 题</span><span class="stat tool">工具 <b>${H.kon[k.i]}</b> 题</span>
@@ -1534,7 +1558,7 @@ function refresh() {
 function renderView() {
   if (VIEW === 'read') { paintReader(); sidePanel([...R.sel][0]); }
   else if (VIEW === 'overview') { const sc = $('#v-overview').scrollTop; renderOverview(); $('#v-overview').scrollTop = sc; }
-  else if (VIEW === 'cards') { renderCardList(); renderCardDetail(); }
+  else if (VIEW === 'cards') { renderCardList(true); renderCardDetail(); }  // heat changed: counts and bars too
   else if (VIEW === 'graph') buildGraph();
   else if (VIEW === 'blind') renderBlind();
   else if (VIEW === 'questions') renderQuestions();

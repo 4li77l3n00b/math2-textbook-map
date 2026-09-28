@@ -2,11 +2,18 @@
   --bg: #f6f5f2; --panel: #ffffff; --ink: #1f2328; --muted: #6a6f76; --line: #e2e0da; --hover: #f0eee8;
   --accent: #b4442a; --topic: 214, 84, 38; --tool: 40, 96, 200; --sel: #111;
   --c-core: #b4442a; --c-aux: #c98a1a; --c-pre: #7d8590; --page: #fff;
+  /* knowledge-point kinds: text colour / tag background */
+  --k-def: #1f5fbf; --k-def-bg: #e3edfb; --k-thm: #b4442a; --k-thm-bg: #f8e4de; --k-for: #7a3fb0; --k-for-bg: #efe5f8;
+  --k-pro: #0f7a6c; --k-pro-bg: #dcf1ed; --k-met: #3d7a1c; --k-met-bg: #e4f2da; --k-con: #5b6470; --k-con-bg: #e9ebee;
+  --k-ex: #8a6d1a; --k-ex-bg: #f5eed8;
   font-size: 14px;
 }
 @media (prefers-color-scheme: dark) {
   :root { --bg: #17181a; --panel: #1f2023; --ink: #e6e6e3; --muted: #9a9ea5; --line: #34363a; --hover: #2a2c30;
-          --accent: #f08a6a; --sel: #fff; --page: #ddd; }
+          --accent: #f08a6a; --sel: #fff; --page: #ddd;
+          --k-def: #8db8f5; --k-def-bg: #1d2c42; --k-thm: #f39c80; --k-thm-bg: #3d2520; --k-for: #c9a2ef; --k-for-bg: #33253f;
+          --k-pro: #6fd3c2; --k-pro-bg: #183633; --k-met: #9fd67c; --k-met-bg: #243519; --k-con: #b3bac3; --k-con-bg: #2c2f34;
+          --k-ex: #e0c170; --k-ex-bg: #3a3220; }
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
@@ -176,6 +183,19 @@ table.t th { font-weight: 600; color: var(--muted); font-size: 12px; position: s
 .ci { display: grid; grid-template-columns: 1fr 70px; gap: 8px; padding: 6px 12px; border-bottom: 1px solid var(--line); cursor: pointer; }
 .ci:hover, .ci.cur { background: var(--hover); }
 .ci .s { font-size: 11.5px; color: var(--muted); }
+.ci .nm .kb { margin-right: 6px; }
+.tree .nm .kb { margin-right: 5px; }
+.kb { display: inline-block; font-size: 11px; font-weight: 600; padding: 0 5px; border-radius: 4px; line-height: 17px; white-space: nowrap; vertical-align: 1px;
+  color: var(--k-con); background: var(--k-con-bg); }
+.kb-definition { color: var(--k-def); background: var(--k-def-bg); }
+.kb-theorem, .kb-corollary, .kb-lemma { color: var(--k-thm); background: var(--k-thm-bg); }
+.kb-formula { color: var(--k-for); background: var(--k-for-bg); }
+.kb-property { color: var(--k-pro); background: var(--k-pro-bg); }
+.kb-method { color: var(--k-met); background: var(--k-met-bg); }
+.kb-example { color: var(--k-ex); background: var(--k-ex-bg); }
+.kp-title .kb { font-size: 12px; vertical-align: 4px; margin-left: 4px; }
+.kch { position: sticky; top: 0; z-index: 1; background: var(--hover); font-weight: 600; padding: 5px 12px; border-bottom: 1px solid var(--line); }
+.ksec { font-size: 12px; color: var(--muted); padding: 4px 12px 2px; border-bottom: 1px dashed var(--line); }
 .ci .bars { display: flex; flex-direction: column; gap: 4px; justify-content: center; }
 #cardDetail, #qDetail { flex: 1; padding: 18px 26px 80px; }
 /* knowledge-point page: a centred reading column (title, statement, one-line summary), details behind tabs */
