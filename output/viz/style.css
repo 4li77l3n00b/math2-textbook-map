@@ -377,6 +377,15 @@ details.member summary { cursor: pointer; padding: 3px 0; }
 .hb.mb i.core { opacity: 1; }
 .msig { padding-right: 16px; font-size: 15px; }
 .msig .lbl, .mqi .d .lbl, .q-methods > .lbl { font-weight: 600; color: var(--accent); margin-right: 8px; white-space: nowrap; font-size: 12.5px; }
+/* method card: standard steps and pitfalls (output/methods/cards.txt) */
+.mcard { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 14px; margin: 0 0 16px; }
+.mcard > div { border: 1px solid var(--line); border-radius: 8px; padding: 10px 16px 12px; font-size: 14.5px; line-height: 1.85; }
+.mcard h4 { margin: 0 0 4px; font-size: 13px; color: var(--accent); }
+.mcard ol, .mcard ul { margin: 0; padding-left: 1.3em; }
+.mcard li + li { margin-top: .3em; }
+.mcard .pf { border-color: var(--k-thm); background: var(--k-thm-bg); }
+.mcard .pf h4, .mcard .pf li::marker { color: var(--k-thm); }
+@media (max-width: 900px) { .mcard { grid-template-columns: 1fr; } }
 .mq-h { display: flex; align-items: center; gap: 10px; }
 .mq-h .seg { font-weight: normal; }
 .mqi { padding: 9px 2px; }

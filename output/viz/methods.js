@@ -107,6 +107,10 @@ function renderMethodDetail() {
       ${pos >= 0 ? `<span class="kp-nav"><button class="icon" data-mstep="-1" ${pos > 0 ? '' : 'disabled'} title="上一个（↑ / ←）">↑</button><span class="muted small">${pos + 1} / ${MV.order.length}</span><button class="icon" data-mstep="1" ${pos < MV.order.length - 1 ? '' : 'disabled'} title="下一个（↓ / →）">↓</button></span>` : ''}</div>
     <h1 class="kp-title">${esc(m.n)}</h1>
     <div class="kp-stmt msig"><span class="lbl">识别信号</span>${fmtStep(m.s)}</div>
+    ${m.st && m.st.length ? `<div class="mcard">
+      <div><h4>标准步骤</h4><ol>${m.st.map(t => `<li>${esc(t)}</li>`).join('')}</ol></div>
+      ${m.pf && m.pf.length ? `<div class="pf"><h4>易错点</h4><ul>${m.pf.map(t => `<li>${esc(t)}</li>`).join('')}</ul></div>` : ''}
+    </div>` : ''}
     <div class="kp-meta"><span class="stat">作关键方法 <b>${nc}</b> 题</span><span class="stat">顺带用到 <b>${uses.length - nc}</b> 题</span><span class="muted small">${rng}</span></div>
     <h3>历年出现 <span class="muted small">深色为关键方法，浅色为顺带用到；淡色为筛选范围外的年份</span></h3>${mYearChart(coreY, auxY)}
     ${kps.length ? `<h3>常用知识点 <span class="muted small">用到这个方法的步骤所引用的知识点，数字为题数</span></h3>

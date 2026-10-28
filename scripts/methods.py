@@ -4,6 +4,8 @@
   python3 scripts/methods.py probe                one tiny request: is the model reachable
   python3 scripts/methods.py pilot [N]            label a stratified sample of N questions (default 20)
   python3 scripts/methods.py run [--workers K]    label all questions into output/methods/raw/ (skips done ones)
+  python3 scripts/methods.py redo [ID ...]        relabel the given questions, or by default the gaps: no method,
+                                                  a new-method suggestion, or not labelled yet
   python3 scripts/methods.py report [raw|pilot]   summarize the labels
 
 The taxonomy (written by Claude) goes in a developer message of its own so the relay caches it; the question
@@ -25,7 +27,7 @@ OUT = ROOT / 'output/methods'
 MODEL = 'gpt-6.1-sol'    # user decision 2026-10-29 (the mapping used gpt-6-astra)
 EFFORT = 'medium'
 WORKERS = 2              # Codex desktop may share the relay; the hard cap across everything is 4
-CACHE_KEY = 'math2-methods-v2'  # v2: + fn-property, gen-counterexample, gen-special
+CACHE_KEY = 'math2-methods-v3'  # v3: + 11 methods from the full run's gaps (der-basic, int-basic, ode-exact, ...)
 
 
 def taxonomy():
@@ -156,15 +158,15 @@ def cmd_probe():
     print(MODEL, '->', text.strip(), usage)
 
 
-def label(qs, out_dir):
-    """Label the questions not yet in out_dir; failures are logged and left for a rerun."""
+def label(qs, out_dir, redo=False):
+    """Label the questions not yet in out_dir (all of qs with redo); failures are logged and left for a rerun."""
     md = _md()
     _lock = md.single_api_process()  # noqa: F841 - never next to another API process
     items = taxonomy()
     ids = {it['id'] for it in items}
     pre = prefix(items)
     out_dir.mkdir(parents=True, exist_ok=True)
-    todo = [q for q in qs if not (out_dir / f"{q['id']}.json").exists()]
+    todo = [q for q in qs if redo or not (out_dir / f"{q['id']}.json").exists()]
     md.log(f'{len(todo)}/{len(qs)} questions to label with {MODEL}, {WORKERS} workers')
     done = [0]
 
@@ -196,11 +198,49 @@ def cmd_run():
     label(questions(), OUT / 'raw')
 
 
+def gaps():
+    """Questions the current labels leave open: not labelled, no method, or a suggested new method."""
+    out = []
+    for q in questions():
+        f = OUT / 'raw' / f"{q['id']}.json"
+        if not f.exists():
+            out.append(q['id'])
+            continue
+        res = json.loads(f.read_text(encoding='utf-8'))['result']
+        if not res['methods'] or res['new_methods']:
+            out.append(q['id'])
+    return out
+
+
+def cmd_redo(ids):
+    ids = set(ids or gaps())
+    label([q for q in questions() if q['id'] in ids], OUT / 'raw', redo=True)
+
+
+def cards():
+    """output/methods/cards.txt (written by Claude): per method id, standard steps and pitfalls."""
+    out, cur = {}, None
+    for raw in (OUT / 'cards.txt').read_text(encoding='utf-8').splitlines():
+        line = raw.strip()
+        if not line or line.startswith('# '):
+            continue
+        if line.startswith('@ '):
+            cur = out.setdefault(line[2:].strip(), {'st': [], 'pf': []})
+        elif line.startswith('!'):
+            cur['pf'].append(line[1:].strip())
+        else:
+            cur['st'].append(line.split('. ', 1)[1] if line[0].isdigit() else line)
+    return out
+
+
 def export(qids):
-    """For build_viz.py: the method list and, per question id, [[method index, 1 core | 0 aux, steps, cue, why]]."""
+    """For build_viz.py: the method list (with its card) and, per question id,
+    [[method index, 1 core | 0 aux, steps, cue, why]]."""
     items = taxonomy()
     idx = {it['id']: i for i, it in enumerate(items)}
-    methods = [{'id': it['id'], 'n': it['name'], 'g': it['group'], 's': it['signal']} for it in items]
+    cd = cards()
+    methods = [{'id': it['id'], 'n': it['name'], 'g': it['group'], 's': it['signal'], **cd.get(it['id'], {})}
+               for it in items]
     per_q = {}
     for qid in qids:
         f = OUT / 'raw' / f'{qid}.json'
@@ -240,4 +280,4 @@ if __name__ == '__main__':
         del args[i:i + 2]
     cmd, *rest = args or ['report']
     {'probe': cmd_probe, 'pilot': lambda: cmd_pilot(int(rest[0]) if rest else 20), 'run': cmd_run,
-     'report': lambda: cmd_report(*rest)}[cmd]()
+     'redo': lambda: cmd_redo(rest), 'report': lambda: cmd_report(*rest)}[cmd]()
