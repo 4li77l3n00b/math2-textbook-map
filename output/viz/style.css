@@ -342,3 +342,31 @@ details.cite.hit { outline: 2px solid var(--accent); }
 }
 details.member { margin: 4px 0; }
 details.member summary { cursor: pointer; padding: 3px 0; }
+
+/* formula quick reference (formulas.js): floating over every page, above dialogs */
+.fxbtn { margin-left: 10px; font-size: 13px; padding: 4px 11px; border-radius: 6px; }
+.fxbtn.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+#fx { position: fixed; z-index: 55; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 10px; box-shadow: 0 10px 34px rgba(0,0,0,.22); resize: both; overflow: hidden; min-width: 320px; min-height: 220px; }
+#fx[hidden] { display: none; }
+.fx-hd { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--line); cursor: move; user-select: none; background: var(--hover); }
+.fx-hd b { white-space: nowrap; }
+.fx-hd input[type=search] { flex: 1; min-width: 0; cursor: text; }
+.fx-hd label { white-space: nowrap; cursor: pointer; }
+.fx-hd button.icon { padding: 0 8px; font-size: 16px; line-height: 22px; }
+.fx-chips { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 10px; border-bottom: 1px solid var(--line); }
+.fx-chips button { font-size: 12px; padding: 1px 8px; }
+.fx-chips button:disabled { opacity: .35; cursor: default; }
+.fx-body { flex: 1; overflow: auto; padding-bottom: 12px; }
+.fx-g { position: sticky; top: 0; z-index: 1; background: var(--panel); font-weight: 600; font-size: 13px; color: var(--accent);
+  padding: 8px 14px 4px; border-bottom: 1px solid var(--line); }
+.fx-it { display: grid; grid-template-columns: 7.5em 1fr; gap: 10px; padding: 7px 14px; border-bottom: 1px dashed var(--line); align-items: baseline; }
+.fx-nm { font-size: 12px; color: var(--muted); }
+.fx-f { overflow-x: auto; overflow-y: hidden; font-size: 15px; padding: 2px 0; }
+.fx-ps { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 1.6em; row-gap: 4px; }
+.fx-p { white-space: nowrap; }
+.fx-note { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+/* recite mode: formulas hidden until clicked */
+#fx.hide .fx-it { cursor: pointer; }
+#fx.hide .fx-it:not(.show) .fx-f { filter: blur(7px); opacity: .45; }
+#fx.hide .fx-it:not(.show):hover .fx-f { opacity: .6; }
