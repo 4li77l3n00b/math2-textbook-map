@@ -181,10 +181,10 @@ table.t th { font-weight: 600; color: var(--muted); font-size: 12px; position: s
 .tw { display: inline-block; width: 14px; color: var(--muted); }
 
 /* cards */
-#cardList, #qList { width: 420px; flex: none; border-right: 1px solid var(--line); display: flex; flex-direction: column; }
-#cardList .ctl, #qList .ctl { padding: 10px; display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid var(--line); }
-#cardList .ctl input[type=search], #qList .ctl input[type=search] { flex: 1 1 100%; }
-#cardList .lst, #qList .lst { overflow: auto; flex: 1; }
+#cardList, #qList, #mList { width: 420px; flex: none; border-right: 1px solid var(--line); display: flex; flex-direction: column; }
+#cardList .ctl, #qList .ctl, #mList .ctl { padding: 10px; display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid var(--line); }
+#cardList .ctl input[type=search], #qList .ctl input[type=search], #mList .ctl input[type=search] { flex: 1 1 100%; }
+#cardList .lst, #qList .lst, #mList .lst { overflow: auto; flex: 1; }
 .ci { display: grid; grid-template-columns: 1fr 70px; gap: 8px; padding: 6px 12px; border-bottom: 1px solid var(--line); cursor: pointer; }
 .ci:hover, .ci.cur { background: var(--hover); }
 .ci .s { font-size: 11.5px; color: var(--muted); }
@@ -202,9 +202,9 @@ table.t th { font-weight: 600; color: var(--muted); font-size: 12px; position: s
 .kch { position: sticky; top: 0; z-index: 1; background: var(--hover); font-weight: 600; padding: 5px 12px; border-bottom: 1px solid var(--line); }
 .ksec { font-size: 12px; color: var(--muted); padding: 4px 12px 2px; border-bottom: 1px dashed var(--line); }
 .ci .bars { display: flex; flex-direction: column; gap: 4px; justify-content: center; }
-#cardDetail, #qDetail { flex: 1; padding: 18px 26px 80px; }
+#cardDetail, #qDetail, #mDetail { flex: 1; padding: 18px 26px 80px; }
 /* knowledge-point page: a centred reading column (title, statement, one-line summary), details behind tabs */
-#v-cards.nolist #cardList, #v-questions.nolist #qList { display: none; }
+#v-cards.nolist #cardList, #v-questions.nolist #qList, #v-methods.nolist #mList { display: none; }
 .kpd { max-width: 740px; margin: 0 auto; }
 .kpd-top { display: flex; align-items: center; gap: 12px; min-height: 28px; }
 .kpd-top .crumb { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -334,8 +334,8 @@ details.cite.hit { outline: 2px solid var(--accent); }
   #toc, #minimap { display: none; }
   #v-read.on { flex-direction: column; }
   #side { width: auto; height: 40%; border-left: none; border-top: 1px solid var(--line); }
-  #cardList, #qList { width: 100%; }
-  #v-cards.on, #v-questions.on { flex-direction: column; }
+  #cardList, #qList, #mList { width: 100%; }
+  #v-cards.on, #v-questions.on, #v-methods.on { flex-direction: column; }
   #graphSide { display: none; }
   .tree .row { grid-template-columns: 1fr 60px 60px; }
   .tree .row > :nth-child(3), .tree .row > :nth-child(5) { display: none; }
@@ -370,3 +370,24 @@ details.member summary { cursor: pointer; padding: 3px 0; }
 #fx.hide .fx-it { cursor: pointer; }
 #fx.hide .fx-it:not(.show) .fx-f { filter: blur(7px); opacity: .45; }
 #fx.hide .fx-it:not(.show):hover .fx-f { opacity: .6; }
+
+/* solving methods (methods.js) */
+.hb.mb { display: flex; }
+.hb.mb i { position: static; display: block; height: 100%; border-radius: 0; background: var(--accent); opacity: .35; }
+.hb.mb i.core { opacity: 1; }
+.msig { padding-right: 16px; font-size: 15px; }
+.msig .lbl, .mqi .d .lbl, .q-methods > .lbl { font-weight: 600; color: var(--accent); margin-right: 8px; white-space: nowrap; font-size: 12.5px; }
+.mq-h { display: flex; align-items: center; gap: 10px; }
+.mq-h .seg { font-weight: normal; }
+.mqi { padding: 9px 2px; }
+.mqi .stem { font-size: 13.5px; margin: 4px 0 3px; line-height: 1.55; }
+.more-btn { margin: 12px 0; }
+/* method tags on the questions: a row under the answer, and a tag at each step that uses one */
+.mtag { display: inline-block; font-size: 12px; line-height: 18px; padding: 0 7px; border-radius: 9px; border: 1px solid var(--accent);
+  color: var(--accent); background: var(--panel); white-space: nowrap; margin-right: 6px; }
+.mtag.core { background: var(--accent); color: var(--panel); }
+.mtag:hover { text-decoration: none; filter: brightness(1.1); }
+.mtags { margin: 3px 0 2px; }
+.q-methods { display: flex; align-items: baseline; gap: 4px; margin: 8px 0 4px; padding: 8px 14px; border: 1px dashed var(--line); border-radius: 8px; }
+.q-methods > div { display: flex; flex-direction: column; gap: 5px; }
+.q-methods .mcue { font-size: 12px; color: var(--muted); }

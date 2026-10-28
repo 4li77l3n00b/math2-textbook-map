@@ -16,13 +16,14 @@
   <nav id="tabs">
     <a data-view="read" title="教材阅读（Alt+1）">教材阅读</a>
     <a data-view="cards" title="知识点（Alt+2）">知识点</a>
-    <a data-view="questions" title="真题（Alt+3）">真题</a>
+    <a data-view="methods" title="解题方法：题型级的方法，看到什么想到它（Alt+3）">方法</a>
+    <a data-view="questions" title="真题（Alt+4）">真题</a>
     <button id="fxBtn" class="fxbtn" title="公式速查：常用导数、积分、展开式等（Alt+F）">∑ 公式</button>
     <span class="more" title="数据可视化">
       <span class="lbl">图表</span>
-      <a data-view="overview" title="全书总览：各章节的考点 / 工具热度（Alt+4）">全书总览</a>
-      <a data-view="graph" title="关联图：知识点共现与推导关系（Alt+5）">关联图</a>
-      <a data-view="blind" title="盲区：书中没有讲到的考点与工具（Alt+6）">盲区</a>
+      <a data-view="overview" title="全书总览：各章节的考点 / 工具热度（Alt+5）">全书总览</a>
+      <a data-view="graph" title="关联图：知识点共现与推导关系（Alt+6）">关联图</a>
+      <a data-view="blind" title="盲区：书中没有讲到的考点与工具（Alt+7）">盲区</a>
     </span>
   </nav>
   <div id="filters">
@@ -79,6 +80,7 @@
     <aside id="graphSide" class="panel"></aside>
   </section>
   <section id="v-blind" class="view scroll"></section>
+  <section id="v-methods" class="view"><aside id="mList" class="panel"></aside><div id="mDetail" class="panel scroll"></div></section>
   <section id="v-questions" class="view"><aside id="qList" class="panel"></aside><div id="qDetail" class="panel scroll"></div></section>
 </main>
 <div id="modal" hidden><div class="box"><div class="content qbox"></div></div></div>
@@ -89,6 +91,7 @@
 <script src="resume.js"></script>
 <script src="data.js"></script>
 <script src="app.js"></script>
+<script src="methods.js"></script>
 <script src="formulas.js"></script>
 </body>
 </html>

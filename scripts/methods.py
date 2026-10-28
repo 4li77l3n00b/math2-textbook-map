@@ -3,7 +3,8 @@
 
   python3 scripts/methods.py probe                one tiny request: is the model reachable
   python3 scripts/methods.py pilot [N]            label a stratified sample of N questions (default 20)
-  python3 scripts/methods.py report               summarize output/methods/pilot/*.json
+  python3 scripts/methods.py run [--workers K]    label all questions into output/methods/raw/ (skips done ones)
+  python3 scripts/methods.py report [raw|pilot]   summarize the labels
 
 The taxonomy (written by Claude) goes in a developer message of its own so the relay caches it; the question
 (stem, answer, reference solution, numbered steps) is the user message. Output is strict JSON per question.
@@ -18,7 +19,6 @@ import threading
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
-import map_direct as md  # noqa: E402
 from build_textbook_index import jsonsave  # noqa: E402
 
 OUT = ROOT / 'output/methods'
@@ -102,10 +102,16 @@ def prompt(q):
 {steps}'''
 
 
+def _md():
+    import map_direct  # reads the API key at import: only the API commands need it
+    return map_direct
+
+
 _workers, _wl = {}, threading.Lock()
 
 
 def call(pre, user):
+    md = _md()
     with _wl:
         w = _workers.setdefault(threading.get_ident(), len(_workers)) % WORKERS
     body = {'model': MODEL, 'store': False, 'reasoning': {'effort': EFFORT}, 'prompt_cache_key': f'{CACHE_KEY}-w{w}',
@@ -142,6 +148,7 @@ def sample(qs, n):
 
 
 def cmd_probe():
+    md = _md()
     _lock = md.single_api_process()  # noqa: F841
     items, usage = md.post({'model': MODEL, 'store': False, 'reasoning': {'effort': 'low'},
                             'input': [md.msg('user', '只回答 OK')]})
@@ -149,16 +156,17 @@ def cmd_probe():
     print(MODEL, '->', text.strip(), usage)
 
 
-def cmd_pilot(n):
+def label(qs, out_dir):
+    """Label the questions not yet in out_dir; failures are logged and left for a rerun."""
+    md = _md()
     _lock = md.single_api_process()  # noqa: F841 - never next to another API process
     items = taxonomy()
     ids = {it['id'] for it in items}
     pre = prefix(items)
-    picked = sample(questions(), n)
-    (OUT / 'pilot').mkdir(parents=True, exist_ok=True)
-    jsonsave(OUT / 'pilot' / 'sample.json', [q['id'] for q in picked])
-    todo = [q for q in picked if not (OUT / 'pilot' / f"{q['id']}.json").exists()]
-    md.log(f'{len(todo)}/{len(picked)} questions to label with {MODEL}, {WORKERS} workers')
+    out_dir.mkdir(parents=True, exist_ok=True)
+    todo = [q for q in qs if not (out_dir / f"{q['id']}.json").exists()]
+    md.log(f'{len(todo)}/{len(qs)} questions to label with {MODEL}, {WORKERS} workers')
+    done = [0]
 
     def one(q):
         try:
@@ -167,17 +175,46 @@ def cmd_pilot(n):
             md.log(f"{q['id']} failed: {e}")
             return
         bad = [m['id'] for m in res['methods'] if m['id'] not in ids]
-        jsonsave(OUT / 'pilot' / f"{q['id']}.json", {'id': q['id'], 'model': MODEL, 'usage': usage, 'unknown_ids': bad, 'result': res})
-        md.log(f"{q['id']}: {len(res['methods'])} methods, {len(res['new_methods'])} new, "
-               f"in {usage.get('input_tokens')} (cached {usage.get('input_tokens_details', {}).get('cached_tokens')}) "
-               f"out {usage.get('output_tokens')}")
+        jsonsave(out_dir / f"{q['id']}.json", {'id': q['id'], 'model': MODEL, 'cache_key': CACHE_KEY, 'usage': usage,
+                                                'unknown_ids': bad, 'result': res})
+        done[0] += 1
+        md.log(f"[{done[0]}/{len(todo)}] {q['id']}: {len(res['methods'])} methods, {len(res['new_methods'])} new"
+               f"{', UNKNOWN ' + ','.join(bad) if bad else ''}, in {usage.get('input_tokens')} "
+               f"(cached {usage.get('input_tokens_details', {}).get('cached_tokens')}) out {usage.get('output_tokens')}")
     with ThreadPoolExecutor(WORKERS) as ex:
         list(ex.map(one, todo))
 
 
-def cmd_report():
+def cmd_pilot(n):
+    picked = sample(questions(), n)
+    (OUT / 'pilot').mkdir(parents=True, exist_ok=True)
+    jsonsave(OUT / 'pilot' / 'sample.json', [q['id'] for q in picked])
+    label(picked, OUT / 'pilot')
+
+
+def cmd_run():
+    label(questions(), OUT / 'raw')
+
+
+def export(qids):
+    """For build_viz.py: the method list and, per question id, [[method index, 1 core | 0 aux, steps, cue, why]]."""
+    items = taxonomy()
+    idx = {it['id']: i for i, it in enumerate(items)}
+    methods = [{'id': it['id'], 'n': it['name'], 'g': it['group'], 's': it['signal']} for it in items]
+    per_q = {}
+    for qid in qids:
+        f = OUT / 'raw' / f'{qid}.json'
+        if not f.exists():
+            continue
+        res = json.loads(f.read_text(encoding='utf-8'))['result']
+        per_q[qid] = [[idx[m['id']], int(m['role'] == 'core'), m['steps'], m['cue'], m['why']]
+                      for m in sorted(res['methods'], key=lambda m: m['role'] != 'core') if m['id'] in idx]
+    return methods, per_q
+
+
+def cmd_report(sub='raw'):
     items = {it['id']: it for it in taxonomy()}
-    files = sorted((OUT / 'pilot').glob('math2-*.json'))
+    files = sorted((OUT / sub).glob('math2-*.json'))
     tin = tout = tcached = 0
     used, new = Counter(), []
     for f in files:
@@ -196,5 +233,11 @@ def cmd_report():
 
 
 if __name__ == '__main__':
-    cmd, *rest = sys.argv[1:] or ['report']
-    {'probe': cmd_probe, 'pilot': lambda: cmd_pilot(int(rest[0]) if rest else 20), 'report': cmd_report}[cmd]()
+    args = sys.argv[1:]
+    if '--workers' in args:  # at most 4: the relay's limit for everything running together
+        i = args.index('--workers')
+        WORKERS = min(int(args[i + 1]), 4)
+        del args[i:i + 2]
+    cmd, *rest = args or ['report']
+    {'probe': cmd_probe, 'pilot': lambda: cmd_pilot(int(rest[0]) if rest else 20), 'run': cmd_run,
+     'report': lambda: cmd_report(*rest)}[cmd]()

@@ -392,9 +392,12 @@ function qSections(q, focusBlock) {
       <div class="muted small">解答原话：${esc(c.k)}${card ? ` · 引自 ${esc(cardName(card))}` : ''}${c.b.length ? ` · <a data-read="${c.b.join(',')}">在书中查看</a>` : ''}</div>
       <div class="qt tex">“${texHtml(clip(c.q, 240))}”</div></div></details>`;
   };
+  // solving methods (methods.js): a row of tags above the steps, and the method names at the steps that use them
+  const me = (q.me || []).filter(m => D.methods && D.methods[m[0]]);
+  const mtag = ([mi, core]) => `<a class="mtag${core ? ' core' : ''}" data-method="${D.methods[mi].id}" title="${core ? '关键方法' : '顺带用到'}：${esc(D.methods[mi].s)}">${esc(D.methods[mi].n)}</a>`;
   let steps = q.steps.map(st => {
-    const n = st[0], cs = cites.filter(c => c.s.includes(n));
-    return `<div class="step"><div class="n"><span>${n}</span></div><div class="body"><div class="stxt">${stepHtml(st)}</div>
+    const n = st[0], cs = cites.filter(c => c.s.includes(n)), ms = me.filter(m => m[2].includes(n));
+    return `<div class="step"><div class="n"><span>${n}</span></div><div class="body">${ms.length ? `<div class="mtags">${ms.map(mtag).join('')}</div>` : ''}<div class="stxt">${stepHtml(st)}</div>
       ${cs.length ? `<div class="cites">${cs.map(c => citeHtml(c, n)).join('')}</div>` : ''}</div></div>`;
   }).join('');
   const rest = cites.filter(c => !used.has(c.i));
@@ -416,6 +419,7 @@ function qSections(q, focusBlock) {
       ${x.rb.length ? ` · <a data-read="${x.rb.join(',')}">最接近的原文</a>` : ''}<div class="muted small">${fmtStep(x.no || x.se)}</div></div>`).join('')}` : '')
       + (q.no ? `<h3>备注</h3><div class="muted q-note">${fmtStep(q.no)}</div>` : ''),
     nNotes: q.nit.length + (q.no ? 1 : 0),
+    methods: me.length ? `<div class="q-methods"><span class="lbl">方法</span><div>${me.map(m => `<div>${mtag(m)}<span class="mcue">${fmtStep(clip(m[3], 90))}</span></div>`).join('')}</div></div>` : '',
   };
 }
 function markSeen(id) {
@@ -441,7 +445,7 @@ function openQuestion(id, focusBlock, ids) {
       <button class="close" title="关闭（Esc）">×</button></div>
     <h2>${q.y} 年 第 ${esc(q.lb)} 题 ${x.badges}</h2>
     ${x.stem}${x.reveal}
-    <div class="q-reveal" ${SELFTEST ? 'hidden' : ''}>${x.ans}
+    <div class="q-reveal" ${SELFTEST ? 'hidden' : ''}>${x.ans}${x.methods}
     <h3>考查主题</h3>${x.topics}
     <h3 class="steps-h">解题步骤与教材依据 ${x.stepsHead}</h3>${x.steps}${x.notes}</div>`;
   const box = $('#modal .content');
@@ -527,7 +531,7 @@ document.addEventListener('click', e => {
   const a = e.target.closest('[data-kp],[data-card],[data-read],[data-q],[data-node]');
   if (!a) return;
   if (a.dataset.q) {
-    const scope = a.closest('#modal') ? null : a.closest('#cardDetail, #side, #graphSide, #v-blind, .view');
+    const scope = a.closest('#modal') ? null : a.closest('#cardDetail, #mDetail, #side, #graphSide, #v-blind, .view');
     const ids = scope ? [...new Set([...scope.querySelectorAll('[data-q]')].map(x => x.dataset.q))] : null;
     openQuestion(a.dataset.q, a.dataset.fb != null ? +a.dataset.fb : null, ids);
     return;
@@ -1472,7 +1476,7 @@ function renderQDetail() {
       ${pos >= 0 ? `<span class="kp-nav"><button class="icon" data-qstep="-1" ${pos > 0 ? '' : 'disabled'} title="上一题（↑ / ←）">↑</button><span class="muted small">${pos + 1} / ${QV.list.length}</span><button class="icon" data-qstep="1" ${pos < QV.list.length - 1 ? '' : 'disabled'} title="下一题（↓ / →）">↓</button></span>` : ''}</div>
     <h1 class="kp-title">${q.y} 年 第 ${esc(q.lb)} 题 ${x.badges}</h1>
     ${x.stem}${x.reveal}
-    <div class="q-reveal" ${SELFTEST ? 'hidden' : ''}>${x.ans}
+    <div class="q-reveal" ${SELFTEST ? 'hidden' : ''}>${x.ans}${x.methods}
       <nav class="kp-tabs">${tabs.map(([t, l, n], i) => `<button data-qtab="${t}" class="${t === tab ? 'cur' : ''}" title="${l}（${i + 1}）">${l}${n !== '' ? ` <span class="n">${n}</span>` : ''}</button>`).join('')}</nav>
       <section data-pane="steps"><div class="steps-h q-steps-h">${x.stepsHead}</div>${x.steps}</section>
       <section data-pane="topics">${x.topics}</section>
@@ -1560,6 +1564,7 @@ function renderView() {
   if (VIEW === 'read') { paintReader(); sidePanel([...R.sel][0]); }
   else if (VIEW === 'overview') { const sc = $('#v-overview').scrollTop; renderOverview(); $('#v-overview').scrollTop = sc; }
   else if (VIEW === 'cards') { renderCardList(true); renderCardDetail(); }  // heat changed: counts and bars too
+  else if (VIEW === 'methods') { if (window.renderMethods) renderMethods(null, true); }
   else if (VIEW === 'graph') buildGraph();
   else if (VIEW === 'blind') renderBlind();
   else if (VIEW === 'questions') renderQuestions();
@@ -1568,7 +1573,7 @@ function go(view, arg) { location.hash = '#' + view + (arg ? '/' + encodeURIComp
 function route() {
   const [v, ...rest] = location.hash.slice(1).split('/');
   const arg = decodeURIComponent(rest.join('/'));
-  VIEW = ['read', 'overview', 'cards', 'graph', 'blind', 'questions'].includes(v) ? v : 'read';
+  VIEW = ['read', 'overview', 'cards', 'methods', 'graph', 'blind', 'questions'].includes(v) ? v : 'read';
   $$('.view').forEach(el => el.classList.toggle('on', el.id === 'v-' + VIEW));
   $$('#tabs a').forEach(a => a.classList.toggle('on', a.dataset.view === VIEW));
   document.body.dataset.view = VIEW;
@@ -1586,17 +1591,24 @@ function route() {
   } else if (VIEW === 'questions') {
     if (arg && qById[arg]) QV.cur = arg;
     renderQuestions();
+  } else if (VIEW === 'methods') {
+    if (window.renderMethods) renderMethods(arg);  // methods.js loads after this file and routes again
   } else if (VIEW === 'graph') {
     if (!$('#graphCtl').innerHTML) initGraphCtl();
     buildGraph();
   } else renderView();
   if (pending) { const p = pending; pending = null; p(); }
 }
-$('#tabs').addEventListener('click', e => { const a = e.target.closest('a'); if (a) go(a.dataset.view, a.dataset.view === 'read' ? R.bk : (a.dataset.view === 'cards' && CV.cur != null ? K[CV.cur].id : '')); });
+$('#tabs').addEventListener('click', e => {
+  const a = e.target.closest('a');
+  if (!a) return;
+  const v = a.dataset.view;
+  go(v, v === 'read' ? R.bk : v === 'cards' && CV.cur != null ? K[CV.cur].id : v === 'methods' && typeof MV !== 'undefined' && MV.cur != null ? D.methods[MV.cur].id : '');
+});
 addEventListener('hashchange', route);
-// Alt+1…6: the pages in menu order
+// Alt+1…7: the pages in menu order
 addEventListener('keydown', e => {
-  if (!e.altKey || e.ctrlKey || e.metaKey || !/^Digit[1-6]$/.test(e.code)) return;
+  if (!e.altKey || e.ctrlKey || e.metaKey || !/^Digit[1-7]$/.test(e.code)) return;
   const a = $$('#tabs a')[+e.code.slice(5) - 1];
   if (a) { e.preventDefault(); closeModal(); a.click(); }
 });

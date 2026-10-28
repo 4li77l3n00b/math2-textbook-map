@@ -273,13 +273,20 @@ def cmd_data():
         for c in [k['c']] + [m for m, _ in k['m']]:
             if c >= 0:
                 card_out[c].setdefault('kp', []).append(i)
+    # solving methods (methods.py): taxonomy written by Claude, labels per question
+    import methods as mt
+    methods, per_q = mt.export([q['id'] for q in qs])
+    for q in qs:
+        q['me'] = per_q.get(q['id'], [])
     data = {'books': books, 'nodes': nodes, 'blocks': blocks, 'cards': card_out, 'questions': qs, 'kps': kp_list,
+            'methods': methods,
             'built': __import__('datetime').date.today().isoformat()}
     OUT.mkdir(parents=True, exist_ok=True)
     js = 'window.DATA=' + json.dumps(data, ensure_ascii=False, separators=(',', ':')) + ';\n'
     (OUT / 'data.js').write_text(js, encoding='utf-8')
     print(f'knowledge points {len(kp_list)} ({sum(1 for k in kp_list if k.get("card"))} single-card, '
           f'{sum(1 for k in kp_list if k["w"])} hand-worded)')
+    print(f'methods {len(methods)}, labelled questions {len(per_q)}')
     print(f'blocks {len(blocks)} nodes {len(nodes)} cards {len(card_out)} questions {len(qs)} '
           f'size {len(js.encode()) / 1e6:.1f} MB; lalu blocks without rect '
           f'{sum(1 for b in blocks if b["bk"] == "LALU" and not b["r"])}')
