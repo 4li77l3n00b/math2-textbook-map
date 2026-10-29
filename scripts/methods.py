@@ -4,8 +4,8 @@
   python3 scripts/methods.py probe                one tiny request: is the model reachable
   python3 scripts/methods.py pilot [N]            label a stratified sample of N questions (default 20)
   python3 scripts/methods.py run [--workers K]    label all questions into output/methods/raw/ (skips done ones)
-  python3 scripts/methods.py redo [ID ...]        relabel the given questions, or by default the gaps: no method,
-                                                  a new-method suggestion, or not labelled yet
+  python3 scripts/methods.py redo [all|ID ...]    relabel all or the given questions, or by default the gaps: no
+                                                  method, a new-method suggestion, or not labelled yet
   python3 scripts/methods.py report [raw|pilot]   summarize the labels
 
 The taxonomy (written by Claude) goes in a developer message of its own so the relay caches it; the question
@@ -213,8 +213,9 @@ def gaps():
 
 
 def cmd_redo(ids):
-    ids = set(ids or gaps())
-    label([q for q in questions() if q['id'] in ids], OUT / 'raw', redo=True)
+    qs = questions()
+    ids = {q['id'] for q in qs} if ids == ['all'] else set(ids or gaps())
+    label([q for q in qs if q['id'] in ids], OUT / 'raw', redo=True)
 
 
 def cards():
