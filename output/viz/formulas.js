@@ -230,6 +230,7 @@ const FX = (() => {
   }
   function place() {  // keep the window on screen (after a resize of the app window too)
     const W = innerWidth, H = innerHeight;
+    if (W < 200 || H < 150) return;  // minimised / hidden window: keep the last good geometry
     ST.w = Math.min(Math.max(ST.w || 560, 320), W - 16);
     ST.h = Math.min(Math.max(ST.h || Math.round(H * 0.7), 220), H - 16);
     if (ST.x == null) { ST.x = W - ST.w - 24; ST.y = 100; }
@@ -262,7 +263,7 @@ const FX = (() => {
   });
   // resized from the corner (CSS resize): remember the size
   new ResizeObserver(() => {
-    if (box.hidden) return;
+    if (box.hidden || innerWidth < 200 || innerHeight < 150) return;
     ST.w = box.offsetWidth; ST.h = box.offsetHeight;
     clearTimeout(box.saveT); box.saveT = setTimeout(save, 300);
   }).observe(box);
@@ -274,7 +275,11 @@ const FX = (() => {
   $('#fxclose', box).addEventListener('click', () => toggle(false));
   box.addEventListener('click', e => {
     const c = e.target.closest('[data-fxg]');
-    if (c) { const s = body.querySelector(`[data-fxsec="${c.dataset.fxg}"]`); if (s) body.scrollTop = s.offsetTop - body.offsetTop; return; }
+    if (c) {  // the group headers are sticky, so measure from the first formula under the header instead
+      const s = body.querySelector(`[data-fxsec="${c.dataset.fxg}"]`), it = s && s.nextElementSibling;
+      if (it) body.scrollTop = Math.max(0, it.offsetTop - body.offsetTop - s.offsetHeight);
+      return;
+    }
     const it = e.target.closest('.fx-it');
     if (it && ST.hide) it.classList.toggle('show');
   });
