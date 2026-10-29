@@ -210,7 +210,7 @@ const FX = (() => {
       <label class="small" title="遮住公式，点一下显示，用来背诵"><input type="checkbox" id="fxhide">背诵</label>
       <button class="icon" id="fxclose" title="关闭（Esc / Alt+F）">×</button></div>
     <div class="fx-chips">${FX.map((g, i) => `<button data-fxg="${i}">${esc(g.name)}</button>`).join('')}</div>
-    <div class="fx-body"></div>`;
+    <div class="fx-body"></div>${['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'].map(d => `<i class="fx-rz" data-rz="${d}"></i>`).join('')}`;
   document.body.appendChild(box);
   const body = $('.fx-body', box), q = $('#fxq', box);
 
@@ -236,7 +236,8 @@ const FX = (() => {
     if (ST.x == null) { ST.x = W - ST.w - 24; ST.y = 100; }
     ST.x = Math.min(Math.max(ST.x, 8), W - ST.w - 8);
     ST.y = Math.min(Math.max(ST.y, 8), H - 60);
-    Object.assign(box.style, { left: ST.x + 'px', top: ST.y + 'px', width: ST.w + 'px', height: ST.h + 'px' });
+    // moved with transform so dragging only shifts the composited layer instead of re-laying out the window
+    Object.assign(box.style, { transform: `translate3d(${ST.x}px,${ST.y}px,0)`, width: ST.w + 'px', height: ST.h + 'px' });
   }
   function toggle(open = box.hidden) {
     ST.open = open;
@@ -250,23 +251,39 @@ const FX = (() => {
     q.select();
   }
 
-  // drag by the title bar
-  $('.fx-hd', box).addEventListener('pointerdown', e => {
-    if (e.button !== 0 || e.target.closest('input, button, label')) return;
-    const dx = e.clientX - ST.x, dy = e.clientY - ST.y, hd = e.currentTarget;
-    hd.setPointerCapture(e.pointerId);
-    const move = ev => { ST.x = ev.clientX - dx; ST.y = ev.clientY - dy; place(); };
-    const up = () => { hd.removeEventListener('pointermove', move); hd.removeEventListener('pointerup', up); save(); };
-    hd.addEventListener('pointermove', move);
-    hd.addEventListener('pointerup', up);
+  // drag the title bar to move, an edge or corner to resize; at most one update per frame
+  function grab(e, mode) {
+    const el = e.currentTarget, x0 = e.clientX, y0 = e.clientY, s0 = { ...ST }, edge = mode === 'move' ? '' : mode;
+    let last = null, raf = 0;
+    const apply = () => {
+      raf = 0;
+      const dx = last.clientX - x0, dy = last.clientY - y0, W = innerWidth, H = innerHeight;
+      if (mode === 'move') { ST.x = s0.x + dx; ST.y = s0.y + dy; }
+      if (edge.includes('e')) ST.w = Math.min(s0.w + dx, W - s0.x - 8);
+      if (edge.includes('s')) ST.h = Math.min(s0.h + dy, H - s0.y - 8);
+      if (edge.includes('w')) { ST.x = Math.max(8, s0.x + Math.min(dx, s0.w - 320)); ST.w = s0.x + s0.w - ST.x; }
+      if (edge.includes('n')) { ST.y = Math.max(8, s0.y + Math.min(dy, s0.h - 220)); ST.h = s0.y + s0.h - ST.y; }
+      place();
+    };
+    const move = ev => { last = ev; if (!raf) raf = requestAnimationFrame(apply); };
+    const up = () => {
+      el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
+      if (raf) { cancelAnimationFrame(raf); apply(); }
+      box.classList.remove('moving', 'sizing');
+      save();
+    };
+    el.setPointerCapture(e.pointerId);
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerup', up);
+    el.addEventListener('pointercancel', up);
+    box.classList.add('moving');
+    if (edge) box.classList.add('sizing');
     e.preventDefault();
+  }
+  $('.fx-hd', box).addEventListener('pointerdown', e => {
+    if (e.button === 0 && !e.target.closest('input, button, label')) grab(e, 'move');
   });
-  // resized from the corner (CSS resize): remember the size
-  new ResizeObserver(() => {
-    if (box.hidden || innerWidth < 200 || innerHeight < 150) return;
-    ST.w = box.offsetWidth; ST.h = box.offsetHeight;
-    clearTimeout(box.saveT); box.saveT = setTimeout(save, 300);
-  }).observe(box);
+  $$('.fx-rz', box).forEach(h => h.addEventListener('pointerdown', e => { if (e.button === 0) grab(e, h.dataset.rz); }));
   addEventListener('resize', () => { if (!box.hidden) place(); });
 
   q.addEventListener('input', render);

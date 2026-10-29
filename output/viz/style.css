@@ -347,7 +347,23 @@ details.member summary { cursor: pointer; padding: 3px 0; }
 .fxbtn { margin-left: 10px; font-size: 13px; padding: 4px 11px; border-radius: 6px; }
 .fxbtn.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 #fx { position: fixed; z-index: 55; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line);
-  border-radius: 10px; box-shadow: 0 10px 34px rgba(0,0,0,.22); resize: both; overflow: hidden; min-width: 320px; min-height: 220px; }
+  border-radius: 10px; box-shadow: 0 10px 34px rgba(0,0,0,.22); overflow: hidden; min-width: 320px; min-height: 220px;
+  left: 0; top: 0; will-change: transform; contain: layout style; }
+#fx.moving { user-select: none; }
+#fx.moving .fx-body { pointer-events: none; }
+/* off-screen formulas skip layout; while resizing, the per-formula scrollers (the expensive part) are turned off */
+.fx-it { content-visibility: auto; contain-intrinsic-size: auto 60px; }
+#fx.sizing .fx-f { overflow-x: hidden; }
+/* resize handles: 6px edges, 14px corners; the bottom-right one shows a grip */
+.fx-rz { position: absolute; z-index: 3; }
+.fx-rz[data-rz=n], .fx-rz[data-rz=s] { left: 14px; right: 14px; height: 6px; cursor: ns-resize; }
+.fx-rz[data-rz=e], .fx-rz[data-rz=w] { top: 14px; bottom: 14px; width: 6px; cursor: ew-resize; }
+.fx-rz[data-rz=n] { top: 0; } .fx-rz[data-rz=s] { bottom: 0; } .fx-rz[data-rz=e] { right: 0; } .fx-rz[data-rz=w] { left: 0; }
+.fx-rz[data-rz=ne], .fx-rz[data-rz=nw], .fx-rz[data-rz=se], .fx-rz[data-rz=sw] { width: 14px; height: 14px; }
+.fx-rz[data-rz=ne] { top: 0; right: 0; cursor: nesw-resize; } .fx-rz[data-rz=sw] { bottom: 0; left: 0; cursor: nesw-resize; }
+.fx-rz[data-rz=nw] { top: 0; left: 0; cursor: nwse-resize; } .fx-rz[data-rz=se] { bottom: 0; right: 0; cursor: nwse-resize; }
+.fx-rz[data-rz=se]::after { content: ''; position: absolute; right: 3px; bottom: 3px; width: 8px; height: 8px;
+  background: linear-gradient(135deg, transparent 45%, var(--muted) 45% 55%, transparent 55% 70%, var(--muted) 70% 80%, transparent 80%); opacity: .6; }
 #fx[hidden] { display: none; }
 .fx-hd { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--line); cursor: move; user-select: none; background: var(--hover); }
 .fx-hd b { white-space: nowrap; }
