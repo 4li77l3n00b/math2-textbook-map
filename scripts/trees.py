@@ -3,6 +3,7 @@
 
   python3 scripts/trees.py scopes             how many questions each tree covers (core method in its scope)
   python3 scripts/trees.py dump TREE [N]      the decisions of the questions in a tree, compact, for reading
+  python3 scripts/trees.py brief TREE         per chosen method: how often, sample signals, what gets rejected and why
   python3 scripts/trees.py check              parse output/thinking/trees.txt, report unknown method / question ids
 
 The trees themselves are written by Claude in output/thinking/trees.txt:
@@ -117,6 +118,30 @@ def cmd_dump(tid, limit=0):
     print('# chosen vs rejected:', pairs.most_common(20))
 
 
+def cmd_brief(tid, per=4):
+    t = next(x for x in parse() if x['id'] == tid)
+    lab, tr = labels(), traces()
+    qs = [q for q in members(t, lab) if q in tr]
+    by = {}
+    for q in qs:
+        for k, d in enumerate(tr[q]['decisions']):
+            ch = next(o for o in d['options'] if o['verdict'] == 'chosen')
+            by.setdefault(ch['method'] or '-', []).append((q, k, d, ch))
+    print(f"# {t['id']} {t['n']}: {len(qs)} questions, {sum(len(v) for v in by.values())} decisions")
+    for mid, ds in sorted(by.items(), key=lambda x: -len(x[1])):
+        if len(ds) < 2 and mid != '-':
+            continue
+        print(f"\n## {mid} ×{len(ds)} (first decision ×{sum(k == 0 for _, k, _, _ in ds)})")
+        for q, k, d, ch in ds[:per]:
+            print(f"  · [{q[6:]}] {d['ask'][:70]} | {d['signals'][:110]} => {ch['label'][:50]}")
+        rej = Counter((o['method'] or '-', o['verdict']) for _, _, d, _ in ds for o in d['options'] if o['verdict'] != 'chosen')
+        for (m, v), c in rej.most_common(4):
+            why = next(o['reason'] for _, _, d, _ in ds for o in d['options'] if (o['method'] or '-') == m and o['verdict'] == v)
+            print(f"    {'✗' if v == 'fails' else '△'} {m} ×{c}: {why[:110]}")
+    small = sorted((mid, len(ds)) for mid, ds in by.items() if len(ds) < 2 and mid != '-')
+    print('\n# once:', small)
+
+
 def cmd_check():
     mids = {it['id'] for it in mt.taxonomy()}
     for t in parse():
@@ -154,4 +179,4 @@ def export():
 
 if __name__ == '__main__':
     cmd, *rest = sys.argv[1:] or ['scopes']
-    {'scopes': cmd_scopes, 'dump': lambda: cmd_dump(*rest), 'check': cmd_check}[cmd]()
+    {'scopes': cmd_scopes, 'dump': lambda: cmd_dump(*rest), 'brief': lambda: cmd_brief(*rest), 'check': cmd_check}[cmd]()
