@@ -419,6 +419,8 @@ function qSections(q, focusBlock) {
       ${x.rb.length ? ` · <a data-read="${x.rb.join(',')}">最接近的原文</a>` : ''}<div class="muted small">${fmtStep(x.no || x.se)}</div></div>`).join('')}` : '')
       + (q.no ? `<h3>备注</h3><div class="muted q-note">${fmtStep(q.no)}</div>` : ''),
     nNotes: q.nit.length + (q.no ? 1 : 0),
+    think: q.th && window.thinkHtml ? thinkHtml(q) : '',
+    nThink: q.th ? q.th.d.length : 0,
     methods: me.length ? `<div class="q-methods"><span class="lbl">方法</span><div>${me.map(m => `<div>${mtag(m)}<span class="mcue">${fmtStep(clip(m[3], 90))}</span></div>`).join('')}</div></div>` : '',
   };
 }
@@ -446,6 +448,7 @@ function openQuestion(id, focusBlock, ids) {
     <h2>${q.y} 年 第 ${esc(q.lb)} 题 ${x.badges}</h2>
     ${x.stem}${x.reveal}
     <div class="q-reveal" ${SELFTEST ? 'hidden' : ''}>${x.ans}${x.methods}
+    ${x.think ? `<details class="q-think"><summary>思路 <span class="muted small">${x.nThink} 个决策点 · 突破口 · 易错</span></summary>${x.think}</details>` : ''}
     <h3>考查主题</h3>${x.topics}
     <h3 class="steps-h">解题步骤与教材依据 ${x.stepsHead}</h3>${x.steps}${x.notes}</div>`;
   const box = $('#modal .content');
@@ -1467,7 +1470,8 @@ function renderQDetail() {
   markSeen(q.id);
   const x = qSections(q, null);
   const pos = QV.list.indexOf(q.id);
-  const tabs = [['steps', '解题', `${q.steps.length} 步`], ['topics', '考点', q.to.length || ''], ['notes', '备注', x.nNotes || '']].filter(t => t[0] !== 'notes' || x.nNotes);
+  const tabs = [['steps', '解题', `${q.steps.length} 步`], ['think', '思路', x.nThink || ''], ['topics', '考点', q.to.length || ''], ['notes', '备注', x.nNotes || '']]
+    .filter(t => (t[0] !== 'notes' || x.nNotes) && (t[0] !== 'think' || x.think));
   const tab = tabs.some(t => t[0] === QV.tab) ? QV.tab : 'steps';
   el.innerHTML = `<div class="kpd qbox" data-tab="${tab}">
     <div class="kpd-top"><button class="icon" data-qlist title="收起或展开左侧列表（L）">${QV.nolist ? '☰ 列表' : '⇤ 收起列表'}</button>
@@ -1479,6 +1483,7 @@ function renderQDetail() {
     <div class="q-reveal" ${SELFTEST ? 'hidden' : ''}>${x.ans}${x.methods}
       <nav class="kp-tabs">${tabs.map(([t, l, n], i) => `<button data-qtab="${t}" class="${t === tab ? 'cur' : ''}" title="${l}（${i + 1}）">${l}${n !== '' ? ` <span class="n">${n}</span>` : ''}</button>`).join('')}</nav>
       <section data-pane="steps"><div class="steps-h q-steps-h">${x.stepsHead}</div>${x.steps}</section>
+      <section data-pane="think">${x.think}</section>
       <section data-pane="topics">${x.topics}</section>
       <section data-pane="notes">${x.notes}</section>
     </div></div>`;
@@ -1519,7 +1524,7 @@ addEventListener('keydown', e => {
   const d = e.key === 'ArrowDown' || e.key === 'ArrowRight' || k === 'j' ? 1 : e.key === 'ArrowUp' || e.key === 'ArrowLeft' || k === 'k' ? -1 : 0;
   if (d) { e.preventDefault(); qStep(d); }
   else if (k === 'l') qList(QV.nolist);
-  else if (k === '1' || k === '2' || k === '3') qTab(['steps', 'topics', 'notes'][+k - 1]);
+  else if (/^[1-4]$/.test(k)) { const t = $$('#qDetail [data-qtab]')[+k - 1]; if (t) qTab(t.dataset.qtab); }
 });
 
 /* ---------- filters & routing ---------- */
@@ -1568,12 +1573,13 @@ function renderView() {
   else if (VIEW === 'graph') buildGraph();
   else if (VIEW === 'blind') renderBlind();
   else if (VIEW === 'questions') renderQuestions();
+  else if (VIEW === 'train') { if (window.renderTrain) renderTrain(); }
 }
 function go(view, arg) { location.hash = '#' + view + (arg ? '/' + encodeURIComponent(arg) : ''); }
 function route() {
   const [v, ...rest] = location.hash.slice(1).split('/');
   const arg = decodeURIComponent(rest.join('/'));
-  VIEW = ['read', 'overview', 'cards', 'methods', 'graph', 'blind', 'questions'].includes(v) ? v : 'read';
+  VIEW = ['read', 'overview', 'cards', 'methods', 'graph', 'blind', 'questions', 'train'].includes(v) ? v : 'read';
   $$('.view').forEach(el => el.classList.toggle('on', el.id === 'v-' + VIEW));
   $$('#tabs a').forEach(a => a.classList.toggle('on', a.dataset.view === VIEW));
   document.body.dataset.view = VIEW;
@@ -1593,6 +1599,8 @@ function route() {
     renderQuestions();
   } else if (VIEW === 'methods') {
     if (window.renderMethods) renderMethods(arg);  // methods.js loads after this file and routes again
+  } else if (VIEW === 'train') {
+    if (window.renderTrain) renderTrain(arg);  // thinking.js, likewise
   } else if (VIEW === 'graph') {
     if (!$('#graphCtl').innerHTML) initGraphCtl();
     buildGraph();
@@ -1603,12 +1611,13 @@ $('#tabs').addEventListener('click', e => {
   const a = e.target.closest('a');
   if (!a) return;
   const v = a.dataset.view;
-  go(v, v === 'read' ? R.bk : v === 'cards' && CV.cur != null ? K[CV.cur].id : v === 'methods' && typeof MV !== 'undefined' && MV.cur != null ? D.methods[MV.cur].id : '');
+  go(v, v === 'read' ? R.bk : v === 'cards' && CV.cur != null ? K[CV.cur].id : v === 'methods' && typeof MV !== 'undefined' && MV.cur != null ? D.methods[MV.cur].id
+    : v === 'train' && typeof TR !== 'undefined' && TR.cur ? TR.cur : '');
 });
 addEventListener('hashchange', route);
-// Alt+1…7: the pages in menu order
+// Alt+1…8: the pages in menu order
 addEventListener('keydown', e => {
-  if (!e.altKey || e.ctrlKey || e.metaKey || !/^Digit[1-7]$/.test(e.code)) return;
+  if (!e.altKey || e.ctrlKey || e.metaKey || !/^Digit[1-8]$/.test(e.code)) return;
   const a = $$('#tabs a')[+e.code.slice(5) - 1];
   if (a) { e.preventDefault(); closeModal(); a.click(); }
 });

@@ -20,6 +20,7 @@ output/viz/*
 !output/viz/plain2tex.js
 !output/viz/formulas.js
 !output/viz/methods.js
+!output/viz/thinking.js
 !output/viz/resume.js
 !output/viz/vendor/
 

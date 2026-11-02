@@ -181,10 +181,10 @@ table.t th { font-weight: 600; color: var(--muted); font-size: 12px; position: s
 .tw { display: inline-block; width: 14px; color: var(--muted); }
 
 /* cards */
-#cardList, #qList, #mList { width: 420px; flex: none; border-right: 1px solid var(--line); display: flex; flex-direction: column; }
-#cardList .ctl, #qList .ctl, #mList .ctl { padding: 10px; display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid var(--line); }
+#cardList, #qList, #mList, #tList { width: 420px; flex: none; border-right: 1px solid var(--line); display: flex; flex-direction: column; }
+#cardList .ctl, #qList .ctl, #mList .ctl, #tList .ctl { padding: 10px; display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid var(--line); }
 #cardList .ctl input[type=search], #qList .ctl input[type=search], #mList .ctl input[type=search] { flex: 1 1 100%; }
-#cardList .lst, #qList .lst, #mList .lst { overflow: auto; flex: 1; }
+#cardList .lst, #qList .lst, #mList .lst, #tList .lst { overflow: auto; flex: 1; }
 .ci { display: grid; grid-template-columns: 1fr 70px; gap: 8px; padding: 6px 12px; border-bottom: 1px solid var(--line); cursor: pointer; }
 .ci:hover, .ci.cur { background: var(--hover); }
 .ci .s { font-size: 11.5px; color: var(--muted); }
@@ -202,9 +202,9 @@ table.t th { font-weight: 600; color: var(--muted); font-size: 12px; position: s
 .kch { position: sticky; top: 0; z-index: 1; background: var(--hover); font-weight: 600; padding: 5px 12px; border-bottom: 1px solid var(--line); }
 .ksec { font-size: 12px; color: var(--muted); padding: 4px 12px 2px; border-bottom: 1px dashed var(--line); }
 .ci .bars { display: flex; flex-direction: column; gap: 4px; justify-content: center; }
-#cardDetail, #qDetail, #mDetail { flex: 1; padding: 18px 26px 80px; }
+#cardDetail, #qDetail, #mDetail, #tMain { flex: 1; padding: 18px 26px 80px; }
 /* knowledge-point page: a centred reading column (title, statement, one-line summary), details behind tabs */
-#v-cards.nolist #cardList, #v-questions.nolist #qList, #v-methods.nolist #mList { display: none; }
+#v-cards.nolist #cardList, #v-questions.nolist #qList, #v-methods.nolist #mList, #v-train.nolist #tList { display: none; }
 .kpd { max-width: 740px; margin: 0 auto; }
 .kpd-top { display: flex; align-items: center; gap: 12px; min-height: 28px; }
 .kpd-top .crumb { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -287,7 +287,7 @@ body.selftest .qrow .s { display: none; }
 .q-topic { margin: 10px 0; }
 .kpd section[data-pane=topics] > .q-topic:first-child, .kpd section[data-pane=notes] > h3:first-child { margin-top: 16px; }
 .q-steps-h { margin: 14px 0 6px; font-size: 13px; }
-.kpd[data-tab=steps] section[data-pane=steps], .kpd[data-tab=topics] section[data-pane=topics], .kpd[data-tab=notes] section[data-pane=notes] { display: block; }
+.kpd[data-tab=steps] section[data-pane=steps], .kpd[data-tab=think] section[data-pane=think], .kpd[data-tab=topics] section[data-pane=topics], .kpd[data-tab=notes] section[data-pane=notes] { display: block; }
 .seen-dot { color: var(--muted); font-size: 11px; }
 .steps-h { display: flex; align-items: baseline; gap: 10px; }
 .steps-h .seg { margin-left: auto; display: inline-flex; align-items: center; gap: 0; font-size: 12px; font-weight: normal; color: var(--muted); }
@@ -334,8 +334,8 @@ details.cite.hit { outline: 2px solid var(--accent); }
   #toc, #minimap { display: none; }
   #v-read.on { flex-direction: column; }
   #side { width: auto; height: 40%; border-left: none; border-top: 1px solid var(--line); }
-  #cardList, #qList, #mList { width: 100%; }
-  #v-cards.on, #v-questions.on, #v-methods.on { flex-direction: column; }
+  #cardList, #qList, #mList, #tList { width: 100%; }
+  #v-cards.on, #v-questions.on, #v-methods.on, #v-train.on { flex-direction: column; }
   #graphSide { display: none; }
   .tree .row { grid-template-columns: 1fr 60px 60px; }
   .tree .row > :nth-child(3), .tree .row > :nth-child(5) { display: none; }
@@ -416,3 +416,39 @@ details.member summary { cursor: pointer; padding: 3px 0; }
 .q-methods { display: flex; align-items: baseline; gap: 4px; margin: 8px 0 4px; padding: 8px 14px; border: 1px dashed var(--line); border-radius: 8px; }
 .q-methods > div { display: flex; flex-direction: column; gap: 5px; }
 .q-methods .mcue { font-size: 12px; color: var(--muted); }
+
+/* thinking traces (thinking.js): stages, decision points, breakthrough, traps; the 思路训练 page */
+.th-stages { display: flex; gap: 4px; margin: 14px 0 12px; }
+.th-stage { min-width: 0; padding: 6px 10px; border-radius: 6px; border-top: 3px solid var(--line); background: var(--hover); font-size: 13px; line-height: 1.55; }
+.th-stage.s0 { border-top-color: var(--k-def); } .th-stage.s1 { border-top-color: var(--k-thm); }
+.th-stage.s2 { border-top-color: var(--k-pro); } .th-stage.s3 { border-top-color: var(--k-con); }
+.th-dec { border: 1px solid var(--line); border-radius: 8px; padding: 10px 16px 12px; margin: 12px 0; }
+.th-dh { margin-bottom: 4px; }
+.th-sit, .th-sig { font-size: 14px; line-height: 1.8; }
+.th-sit .lbl, .th-sig .lbl, .th-break .lbl, .th-traps .lbl { font-weight: 600; color: var(--accent); margin-right: 8px; font-size: 12.5px; white-space: nowrap; }
+.th-ask { font-weight: 600; margin: 6px 0 8px; font-size: 15px; line-height: 1.7; }
+.th-opts { display: flex; flex-direction: column; gap: 6px; }
+.th-opt { border: 1px solid var(--line); border-radius: 7px; padding: 7px 12px; font-size: 14px; line-height: 1.7; }
+.th-opt[data-pick] { cursor: pointer; }
+.th-opt[data-pick]:hover { border-color: var(--accent); background: var(--hover); }
+.th-ol { display: flex; align-items: baseline; gap: 10px; }
+.th-ol .key { flex: none; width: 20px; height: 20px; line-height: 20px; text-align: center; border-radius: 50%; font-size: 12px; background: var(--hover); color: var(--muted); }
+.th-v { margin-left: auto; flex: none; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.th-reason { font-size: 13.5px; color: var(--muted); margin: 2px 0 0 30px; line-height: 1.75; }
+.th-opt.v-chosen { border-color: var(--k-met); background: var(--k-met-bg); } .th-opt.v-chosen .th-v { color: var(--k-met); }
+.th-opt.v-fails .th-v { color: var(--k-thm); } .th-opt.v-worse .th-v { color: var(--k-ex); }
+.th-opt.picked { box-shadow: 0 0 0 2px var(--accent); }
+.th-opt.picked.v-fails { box-shadow: 0 0 0 2px var(--k-thm); }
+.th-sig { margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--line); }
+.chip.st { border-style: dashed; cursor: help; }
+.th-break, .th-traps { display: flex; align-items: baseline; margin: 12px 0; padding: 10px 16px; border-radius: 8px; font-size: 14.5px; line-height: 1.8; }
+.th-break { border: 1px solid var(--accent); }
+.th-traps { border: 1px solid var(--k-thm); background: var(--k-thm-bg); }
+.th-traps .lbl { color: var(--k-thm); }
+.th-traps ul { margin: 0; padding-left: 1.2em; }
+.th-done { margin: 16px 0 4px; font-size: 15px; }
+.th-hint { margin: 10px 0 0; }
+.th-full { margin: 10px 0; } .th-full > summary { cursor: pointer; color: var(--accent); }
+.q-think { margin: 10px 0; } .q-think > summary { cursor: pointer; font-weight: 600; }
+button.primary { background: var(--accent); color: var(--panel); border-color: var(--accent); }
+.tr-ok { color: var(--k-met); font-weight: 600; } .tr-bad { color: var(--k-thm); font-weight: 600; }

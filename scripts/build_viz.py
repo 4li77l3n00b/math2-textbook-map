@@ -278,8 +278,14 @@ def cmd_data():
     methods, per_q = mt.export([q['id'] for q in qs])
     for q in qs:
         q['me'] = per_q.get(q['id'], [])
+    # thinking traces (thinking.py): stages, decision points, breakthrough, traps; only questions that have one get 'th'
+    import thinking as tk
+    strategies, per_q = tk.export([q['id'] for q in qs])
+    for q in qs:
+        if q['id'] in per_q:
+            q['th'] = per_q[q['id']]
     data = {'books': books, 'nodes': nodes, 'blocks': blocks, 'cards': card_out, 'questions': qs, 'kps': kp_list,
-            'methods': methods,
+            'methods': methods, 'strategies': strategies,
             'built': __import__('datetime').date.today().isoformat()}
     OUT.mkdir(parents=True, exist_ok=True)
     js = 'window.DATA=' + json.dumps(data, ensure_ascii=False, separators=(',', ':')) + ';\n'
