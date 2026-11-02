@@ -287,6 +287,8 @@ const FX = (() => {
   addEventListener('resize', () => { if (!box.hidden) place(); });
 
   q.addEventListener('input', render);
+  // global search (search.js) opens the panel filtered to one formula
+  window.fxSearch = s => { toggle(true); q.value = s; render(); };
   $('#fxhide', box).checked = ST.hide;
   $('#fxhide', box).addEventListener('change', e => { ST.hide = e.target.checked; save(); box.classList.toggle('hide', ST.hide); $$('.fx-it.show', box).forEach(x => x.classList.remove('show')); });
   $('#fxclose', box).addEventListener('click', () => toggle(false));
