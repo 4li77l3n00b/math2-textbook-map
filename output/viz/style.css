@@ -417,38 +417,69 @@ details.member summary { cursor: pointer; padding: 3px 0; }
 .q-methods > div { display: flex; flex-direction: column; gap: 5px; }
 .q-methods .mcue { font-size: 12px; color: var(--muted); }
 
-/* thinking traces (thinking.js): stages, decision points, breakthrough, traps; the 思路训练 page */
-.th-stages { display: flex; gap: 4px; margin: 14px 0 12px; }
-.th-stage { min-width: 0; padding: 6px 10px; border-radius: 6px; border-top: 3px solid var(--line); background: var(--hover); font-size: 13px; line-height: 1.55; }
-.th-stage.s0 { border-top-color: var(--k-def); } .th-stage.s1 { border-top-color: var(--k-thm); }
-.th-stage.s2 { border-top-color: var(--k-pro); } .th-stage.s3 { border-top-color: var(--k-con); }
-.th-dec { border: 1px solid var(--line); border-radius: 8px; padding: 10px 16px 12px; margin: 12px 0; }
-.th-dh { margin-bottom: 4px; }
-.th-sit, .th-sig { font-size: 14px; line-height: 1.8; }
-.th-sit .lbl, .th-sig .lbl, .th-break .lbl, .th-traps .lbl { font-weight: 600; color: var(--accent); margin-right: 8px; font-size: 12.5px; white-space: nowrap; }
-.th-ask { font-weight: 600; margin: 6px 0 8px; font-size: 15px; line-height: 1.7; }
-.th-opts { display: flex; flex-direction: column; gap: 6px; }
-.th-opt { border: 1px solid var(--line); border-radius: 7px; padding: 7px 12px; font-size: 14px; line-height: 1.7; }
-.th-opt[data-pick] { cursor: pointer; }
-.th-opt[data-pick]:hover { border-color: var(--accent); background: var(--hover); }
-.th-ol { display: flex; align-items: baseline; gap: 10px; }
-.th-ol .key { flex: none; width: 20px; height: 20px; line-height: 20px; text-align: center; border-radius: 50%; font-size: 12px; background: var(--hover); color: var(--muted); }
-.th-v { margin-left: auto; flex: none; font-size: 12px; font-weight: 600; white-space: nowrap; }
-.th-reason { font-size: 13.5px; color: var(--muted); margin: 2px 0 0 30px; line-height: 1.75; }
-.th-opt.v-chosen { border-color: var(--k-met); background: var(--k-met-bg); } .th-opt.v-chosen .th-v { color: var(--k-met); }
-.th-opt.v-fails .th-v { color: var(--k-thm); } .th-opt.v-worse .th-v { color: var(--k-ex); }
-.th-opt.picked { box-shadow: 0 0 0 2px var(--accent); }
-.th-opt.picked.v-fails { box-shadow: 0 0 0 2px var(--k-thm); }
-.th-sig { margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--line); }
-.chip.st { border-style: dashed; cursor: help; }
-.th-break, .th-traps { display: flex; align-items: baseline; margin: 12px 0; padding: 10px 16px; border-radius: 8px; font-size: 14.5px; line-height: 1.8; }
-.th-break { border: 1px solid var(--accent); }
-.th-traps { border: 1px solid var(--k-thm); background: var(--k-thm-bg); }
-.th-traps .lbl { color: var(--k-thm); }
-.th-traps ul { margin: 0; padding-left: 1.2em; }
-.th-done { margin: 16px 0 4px; font-size: 15px; }
-.th-hint { margin: 10px 0 0; }
-.th-full { margin: 10px 0; } .th-full > summary { cursor: pointer; color: var(--accent); }
+/* thinking traces (thinking.js): one thing at a time — the question to ask yourself and the moves; reasons only for the
+   reference move and your pick (others on click); strategies and signals as one quiet line */
+.th-col { max-width: 760px; margin: 0 auto; }
+.th-qh { font-size: 13px; color: var(--muted); margin: 6px 0 2px; letter-spacing: .02em; }
+.th-stem .q-stem { font-size: 16.5px; line-height: 1.95; }
+.th-stem { padding-bottom: 14px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.th-dec { margin: 18px 0 8px; }
+.th-dh { font-size: 12px; color: var(--muted); letter-spacing: .04em; }
+.th-sit { font-size: 13.5px; line-height: 1.8; color: var(--muted); margin: 4px 0 6px; }
+.th-ask { font-size: 17px; font-weight: 600; line-height: 1.7; margin: 0 0 12px; }
+.th-opts { display: flex; flex-direction: column; gap: 8px; }
+button.th-opt { display: flex; align-items: baseline; gap: 12px; width: 100%; text-align: left; font: inherit; font-size: 15px; line-height: 1.7;
+  padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--ink); cursor: pointer; }
+button.th-opt:hover { border-color: var(--accent); }
+.th-opt .key { flex: none; width: 22px; height: 22px; line-height: 22px; text-align: center; border-radius: 50%; font-size: 12px; background: var(--hover); color: var(--muted); }
+div.th-opt { padding: 8px 14px; border-radius: 10px; border: 1px solid transparent; }
+div.th-opt[data-rshow] { cursor: pointer; }
+div.th-opt[data-rshow]:hover { background: var(--hover); }
+.th-ol { display: flex; align-items: baseline; gap: 10px; font-size: 15px; line-height: 1.7; }
+.th-ic { flex: none; width: 18px; text-align: center; font-weight: 700; }
+.th-l { flex: 1; min-width: 0; }
+.th-v { flex: none; font-size: 12px; color: var(--muted); white-space: nowrap; }
+.th-reason { display: none; font-size: 14px; line-height: 1.85; color: var(--muted); margin: 3px 0 2px 28px; }
+.th-opt.show .th-reason { display: block; }
+.th-opt.v0 { background: var(--k-met-bg); } .v0 .th-ic, .th-ic.v0 { color: var(--k-met); }
+.v1 .th-ic, .th-ic.v1 { color: var(--k-thm); } .v2 .th-ic, .th-ic.v2 { color: var(--k-ex); }
+.th-opt.picked { border-color: var(--accent); }
+.th-opt.picked .th-v { color: var(--accent); font-weight: 600; }
+.th-m { font-size: 12.5px; white-space: nowrap; }
+.th-sig { font-size: 13px; line-height: 1.8; color: var(--muted); margin: 10px 0 0 14px; }
+.th-sig b { font-weight: 600; margin-right: 4px; }
+.th-st { border-bottom: 1px dotted var(--muted); cursor: help; }
+.th-sts { white-space: nowrap; }
+.th-past { display: flex; align-items: baseline; gap: 10px; padding: 8px 12px; margin: 10px 0 0; border-radius: 8px; background: var(--hover); cursor: pointer; font-size: 14px; }
+.th-past .th-dh { flex: none; }
+.th-pl { min-width: 0; }
+.th-pr { margin-left: auto; color: var(--muted); font-size: 13px; }
+.th-more { color: var(--muted); margin-left: auto; }
+.th-pr + .th-more { margin-left: 4px; }
+.th-pastwrap { cursor: pointer; border-left: 3px solid var(--hover); padding-left: 10px; }
+.th-go { display: flex; align-items: center; gap: 10px; margin: 16px 0; }
+.th-note { font-size: 12.5px; color: var(--muted); margin: 14px 0; }
+.th-end { margin-top: 26px; padding-top: 6px; border-top: 1px solid var(--line); }
+.th-score { display: flex; align-items: baseline; gap: 10px; margin: 10px 0 14px; font-size: 15px; color: var(--muted); }
+.th-score b { font-size: 26px; color: var(--ink); }
+.th-score span { font-size: 13px; }
+.th-break { padding: 12px 18px; border-radius: 10px; border-left: 4px solid var(--accent); background: var(--hover); margin: 12px 0; }
+.th-k { font-size: 12px; color: var(--accent); font-weight: 600; letter-spacing: .04em; }
+.th-idea { font-size: 16px; line-height: 1.85; margin: 2px 0 4px; }
+.th-origin { font-size: 13.5px; line-height: 1.8; color: var(--muted); }
+.th-flow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 12px 0; font-size: 13px; }
+.th-flow i { color: var(--muted); font-style: normal; }
+.th-sg { padding: 2px 10px; border-radius: 12px; border: 1px solid var(--line); cursor: help; }
+.th-sg small { margin-left: 5px; color: var(--muted); }
+.th-sg.s0 { border-color: var(--k-def); } .th-sg.s1 { border-color: var(--k-thm); } .th-sg.s2 { border-color: var(--k-pro); } .th-sg.s3 { border-color: var(--k-con); }
+.th-fold { margin: 10px 0; }
+.th-fold > summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--accent); }
+.th-fold > summary .n { color: var(--muted); font-weight: normal; }
+.th-traps { margin: 6px 0 0; padding-left: 1.3em; font-size: 14px; line-height: 1.85; }
+.th-traps li + li { margin-top: 4px; }
+.th-traps li::marker { color: var(--k-thm); }
+.th-step { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.th-read .th-dec { padding-top: 12px; border-top: 1px dashed var(--line); }
 .q-think { margin: 10px 0; } .q-think > summary { cursor: pointer; font-weight: 600; }
 button.primary { background: var(--accent); color: var(--panel); border-color: var(--accent); }
 .tr-ok { color: var(--k-met); font-weight: 600; } .tr-bad { color: var(--k-thm); font-weight: 600; }
