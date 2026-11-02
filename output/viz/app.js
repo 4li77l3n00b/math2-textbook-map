@@ -1574,12 +1574,13 @@ function renderView() {
   else if (VIEW === 'blind') renderBlind();
   else if (VIEW === 'questions') renderQuestions();
   else if (VIEW === 'train') { if (window.renderTrain) renderTrain(); }
+  else if (VIEW === 'trees') { if (window.renderTrees) renderTrees(); }
 }
 function go(view, arg) { location.hash = '#' + view + (arg ? '/' + encodeURIComponent(arg) : ''); }
 function route() {
   const [v, ...rest] = location.hash.slice(1).split('/');
   const arg = decodeURIComponent(rest.join('/'));
-  VIEW = ['read', 'overview', 'cards', 'methods', 'graph', 'blind', 'questions', 'train'].includes(v) ? v : 'read';
+  VIEW = ['read', 'overview', 'cards', 'methods', 'graph', 'blind', 'questions', 'train', 'trees'].includes(v) ? v : 'read';
   $$('.view').forEach(el => el.classList.toggle('on', el.id === 'v-' + VIEW));
   $$('#tabs a').forEach(a => a.classList.toggle('on', a.dataset.view === VIEW));
   document.body.dataset.view = VIEW;
@@ -1601,6 +1602,8 @@ function route() {
     if (window.renderMethods) renderMethods(arg);  // methods.js loads after this file and routes again
   } else if (VIEW === 'train') {
     if (window.renderTrain) renderTrain(arg);  // thinking.js, likewise
+  } else if (VIEW === 'trees') {
+    if (window.renderTrees) renderTrees(arg);  // trees.js, likewise
   } else if (VIEW === 'graph') {
     if (!$('#graphCtl').innerHTML) initGraphCtl();
     buildGraph();
@@ -1612,12 +1615,13 @@ $('#tabs').addEventListener('click', e => {
   if (!a) return;
   const v = a.dataset.view;
   go(v, v === 'read' ? R.bk : v === 'cards' && CV.cur != null ? K[CV.cur].id : v === 'methods' && typeof MV !== 'undefined' && MV.cur != null ? D.methods[MV.cur].id
-    : v === 'train' && typeof TR !== 'undefined' && TR.cur ? TR.cur : '');
+    : v === 'train' && typeof TR !== 'undefined' && TR.cur ? TR.cur
+    : v === 'trees' && typeof TV !== 'undefined' && TV.cur ? TV.cur : '');
 });
 addEventListener('hashchange', route);
-// Alt+1…8: the pages in menu order
+// Alt+1…9: the pages in menu order
 addEventListener('keydown', e => {
-  if (!e.altKey || e.ctrlKey || e.metaKey || !/^Digit[1-8]$/.test(e.code)) return;
+  if (!e.altKey || e.ctrlKey || e.metaKey || !/^Digit[1-9]$/.test(e.code)) return;
   const a = $$('#tabs a')[+e.code.slice(5) - 1];
   if (a) { e.preventDefault(); closeModal(); a.click(); }
 });

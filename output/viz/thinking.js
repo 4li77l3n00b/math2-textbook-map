@@ -3,6 +3,12 @@
    Two uses: a "思路" section on the questions page, and the 思路训练 page — read the stem, then at each decision point
    pick the next move before seeing the reasons. Loaded after app.js and methods.js. */
 const ST = D.strategies || [];
+// question-type decision trees (trees.js draws them): a question belongs to a tree when one of its key methods is in scope
+const TREES = D.trees || [];
+const inScope = (mi, sc) => { const id = D.methods[mi] && D.methods[mi].id; return !!id && sc.some(s => id === s || (s.endsWith('*') && id.startsWith(s.slice(0, -1)))); };
+const inTree = (q, t) => (q.me || []).some(m => m[1] && inScope(m[0], t.sc));
+const qTrees = q => TREES.filter(t => inTree(q, t));
+const treeLinks = q => { const ts = qTrees(q); return ts.length ? `<span class="dt-links">决策树：${ts.map(t => `<a data-tree="${t.id}">${esc(t.n)}</a>`).join('、')}</span>` : ''; };
 const STAGE = ['审题定型', '转化化归', '执行计算', '收尾检验'];
 const VD = [['chosen', '✓', '参考做法'], ['fails', '✗', '走不通'], ['worse', '△', '更繁']];
 const tx = s => esc(s).replace(/\n/g, '<br>');  // $…$ is rendered by math() on the container
@@ -48,7 +54,7 @@ window.thinkHtml = function (q) {
   if (!th) return '';
   return `<div class="th-read">${stagesHtml(th)}${breakHtml(th)}
     ${th.d.map((d, k) => decisionHtml(d, k, th.d.length, null, d.o.map((_, i) => i), true)).join('')}${trapsHtml(th, true)}
-    <p class="th-note">思路由模型依据参考解答还原，"走不通 / 更繁"是推断，可能有误。<a data-train="${q.id}">到思路训练里练这道题 ›</a></p></div>`;
+    <p class="th-note">思路由模型依据参考解答还原，"走不通 / 更繁"是推断，可能有误。<a data-train="${q.id}">到思路训练里练这道题 ›</a> ${treeLinks(q)}</p></div>`;
 };
 document.addEventListener('click', e => {
   const r = e.target.closest && e.target.closest('[data-rshow]');
@@ -64,7 +70,8 @@ const trState = id => { const r = TRAIN[id]; return !r ? '' : r.r.every(Boolean)
 const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
 function trainPool() {
-  const qs = F.filter(q => q.th && q.th.d.length && (!TR.sub || q.sub === TR.sub));
+  const tree = TR.sub.startsWith('tree:') && TREES.find(t => 'tree:' + t.id === TR.sub);
+  const qs = F.filter(q => q.th && q.th.d.length && (tree ? inTree(q, tree) : !TR.sub || q.sub === TR.sub));
   const rank = { '': 0, bad: 1, ok: 2 };
   return qs.sort((a, b) => TR.sort === 'todo' ? rank[trState(a.id)] - rank[trState(b.id)] || b.y - a.y
     : TR.sort === 'wrong' ? (trState(b.id) === 'bad') - (trState(a.id) === 'bad') || b.y - a.y
@@ -74,7 +81,8 @@ function renderTrainList() {
   const el = $('#tList');
   if (!el.dataset.init) {
     el.dataset.init = 1;
-    el.innerHTML = `<div class="ctl"><select id="tsub"><option value="">高数＋线代</option><option value="GS">高数</option><option value="LA">线代</option></select>
+    el.innerHTML = `<div class="ctl"><select id="tsub"><option value="">高数＋线代</option><option value="GS">高数</option><option value="LA">线代</option>
+      ${TREES.length ? `<optgroup label="按题型（决策树）">${TREES.map(t => `<option value="tree:${t.id}">${esc(t.n)}</option>`).join('')}</optgroup>` : ''}</select>
       <select id="tsort"><option value="new">新 → 旧</option><option value="todo">先练没做过的</option><option value="wrong">先练做错的</option></select>
       <button class="small" id="trand" title="随机一道（R）">随机一题</button></div>
       <div class="lst"><div id="tn" class="muted small" style="padding:6px 12px"></div><div id="trows"></div></div>`;
@@ -82,6 +90,7 @@ function renderTrainList() {
     ['#tsub', '#tsort'].forEach(x => $(x).addEventListener('input', upd));
     $('#trand').addEventListener('click', trainRandom);
   }
+  $('#tsub').value = TR.sub;
   const qs = trainPool();
   TR.list = qs.map(q => q.id);
   const done = qs.filter(q => TRAIN[q.id]);
@@ -127,6 +136,7 @@ function renderTrainMain() {
       ${finished ? `<div class="th-end">
         <div class="th-score"><b>${right}</b> / ${n}<span>${right === n ? '和参考解答的思路一致' : '选了别的做法不一定错，看理由里说它卡在哪'}</span></div>
         ${breakHtml(th)}${stagesHtml(th)}${trapsHtml(th, false)}
+        ${qTrees(q).length ? `<p class="th-note">${treeLinks(q)}</p>` : ''}
         <details class="th-fold"><summary>完整解答</summary>${x.ans}${x.steps}</details>
         <div class="th-go">${pos < TR.list.length - 1 ? '<button class="primary" data-tstep="1">下一题 →</button><span class="muted small">Enter</span>' : ''}
           <button class="small" data-tagain>重做</button></div></div>` : ''}
@@ -170,6 +180,14 @@ function trainListToggle(show) {
   $('#v-train').classList.toggle('nolist', TR.nolist);
   const b = $('#tMain [data-tlist]'); if (b) b.textContent = TR.nolist ? '☰ 列表' : '⇤ 收起列表';
 }
+// from a decision tree: train only that kind of question
+window.trainScope = function (id) {
+  TR.sub = 'tree:' + id;
+  const sel = $('#tsub'); if (sel) sel.value = TR.sub;
+  TR.cur = null;
+  go('train', '');
+  if (VIEW === 'train') renderTrain();
+};
 window.renderTrain = function (arg) {
   renderTrainList();
   const id = arg && qById[arg] && qById[arg].th ? arg : TR.cur && TR.list.includes(TR.cur) ? TR.cur : TR.list[0];

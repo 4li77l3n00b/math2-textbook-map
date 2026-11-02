@@ -22,6 +22,7 @@ output/viz/*
 !output/viz/methods.js
 !output/viz/thinking.js
 !output/viz/search.js
+!output/viz/trees.js
 !output/viz/resume.js
 !output/viz/vendor/
 

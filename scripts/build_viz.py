@@ -284,8 +284,11 @@ def cmd_data():
     for q in qs:
         if q['id'] in per_q:
             q['th'] = per_q[q['id']]
+    # question-type decision trees (trees.py, written by Claude in output/thinking/trees.txt)
+    import trees as dt
+    trees = dt.export()
     data = {'books': books, 'nodes': nodes, 'blocks': blocks, 'cards': card_out, 'questions': qs, 'kps': kp_list,
-            'methods': methods, 'strategies': strategies,
+            'methods': methods, 'strategies': strategies, 'trees': trees,
             'built': __import__('datetime').date.today().isoformat()}
     OUT.mkdir(parents=True, exist_ok=True)
     js = 'window.DATA=' + json.dumps(data, ensure_ascii=False, separators=(',', ':')) + ';\n'

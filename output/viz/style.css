@@ -181,10 +181,10 @@ table.t th { font-weight: 600; color: var(--muted); font-size: 12px; position: s
 .tw { display: inline-block; width: 14px; color: var(--muted); }
 
 /* cards */
-#cardList, #qList, #mList, #tList { width: 420px; flex: none; border-right: 1px solid var(--line); display: flex; flex-direction: column; }
+#cardList, #qList, #mList, #tList, #trList { width: 420px; flex: none; border-right: 1px solid var(--line); display: flex; flex-direction: column; }
 #cardList .ctl, #qList .ctl, #mList .ctl, #tList .ctl { padding: 10px; display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid var(--line); }
 #cardList .ctl input[type=search], #qList .ctl input[type=search], #mList .ctl input[type=search] { flex: 1 1 100%; }
-#cardList .lst, #qList .lst, #mList .lst, #tList .lst { overflow: auto; flex: 1; }
+#cardList .lst, #qList .lst, #mList .lst, #tList .lst, #trList .lst { overflow: auto; flex: 1; }
 .ci { display: grid; grid-template-columns: 1fr 70px; gap: 8px; padding: 6px 12px; border-bottom: 1px solid var(--line); cursor: pointer; }
 .ci:hover, .ci.cur { background: var(--hover); }
 .ci .s { font-size: 11.5px; color: var(--muted); }
@@ -202,9 +202,9 @@ table.t th { font-weight: 600; color: var(--muted); font-size: 12px; position: s
 .kch { position: sticky; top: 0; z-index: 1; background: var(--hover); font-weight: 600; padding: 5px 12px; border-bottom: 1px solid var(--line); }
 .ksec { font-size: 12px; color: var(--muted); padding: 4px 12px 2px; border-bottom: 1px dashed var(--line); }
 .ci .bars { display: flex; flex-direction: column; gap: 4px; justify-content: center; }
-#cardDetail, #qDetail, #mDetail, #tMain { flex: 1; padding: 18px 26px 80px; }
+#cardDetail, #qDetail, #mDetail, #tMain, #trMain { flex: 1; padding: 18px 26px 80px; }
 /* knowledge-point page: a centred reading column (title, statement, one-line summary), details behind tabs */
-#v-cards.nolist #cardList, #v-questions.nolist #qList, #v-methods.nolist #mList, #v-train.nolist #tList { display: none; }
+#v-cards.nolist #cardList, #v-questions.nolist #qList, #v-methods.nolist #mList, #v-train.nolist #tList, #v-trees.nolist #trList { display: none; }
 .kpd { max-width: 740px; margin: 0 auto; }
 .kpd-top { display: flex; align-items: center; gap: 12px; min-height: 28px; }
 .kpd-top .crumb { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -334,8 +334,8 @@ details.cite.hit { outline: 2px solid var(--accent); }
   #toc, #minimap { display: none; }
   #v-read.on { flex-direction: column; }
   #side { width: auto; height: 40%; border-left: none; border-top: 1px solid var(--line); }
-  #cardList, #qList, #mList, #tList { width: 100%; }
-  #v-cards.on, #v-questions.on, #v-methods.on, #v-train.on { flex-direction: column; }
+  #cardList, #qList, #mList, #tList, #trList { width: 100%; }
+  #v-cards.on, #v-questions.on, #v-methods.on, #v-train.on, #v-trees.on { flex-direction: column; }
   #graphSide { display: none; }
   .tree .row { grid-template-columns: 1fr 60px 60px; }
   .tree .row > :nth-child(3), .tree .row > :nth-child(5) { display: none; }
@@ -503,3 +503,29 @@ button.primary { background: var(--accent); color: var(--panel); border-color: v
 .gs-more { margin: 2px 16px 4px; font-size: 12px; }
 .gs-empty { padding: 14px 18px; }
 .gs-ft { padding: 7px 16px; border-top: 1px solid var(--line); }
+
+/* decision trees (trees.js): question → branches (situation, methods, note), nested; a branch opens its questions */
+#trList { width: 260px; }
+.dt-row .h { justify-content: space-between; }
+.dt-ab { color: var(--muted); font-size: 14.5px; line-height: 1.85; margin: 4px 0 16px; }
+.dt-tree { margin: 8px 0 20px; }
+.dt-q { font-size: 16px; font-weight: 600; margin: 6px 0 8px; line-height: 1.7; }
+.dt-q::before { content: '？'; color: var(--accent); margin-right: 4px; }
+.dt-brs { display: flex; flex-direction: column; gap: 6px; padding-left: 14px; border-left: 2px solid var(--line); margin-left: 6px; }
+.dt-br { position: relative; padding: 6px 0 6px 6px; }
+.dt-br::before { content: ''; position: absolute; left: -16px; top: 17px; width: 14px; border-top: 2px solid var(--line); }
+.dt-bh { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 8px; font-size: 15px; line-height: 1.7; }
+.dt-bh[data-bopen] { cursor: pointer; }
+.dt-w { margin-right: 4px; }
+.dt-bh .mtag { margin-right: 0; }
+.dt-n { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.dt-bh[data-bopen]:hover .dt-n, .dt-n.on { color: var(--accent); }
+.dt-no { font-size: 13.5px; color: var(--muted); line-height: 1.75; margin-top: 1px; }
+.dt-sub { margin-top: 8px; }
+.dt-qs { margin: 6px 0 4px; padding: 4px 10px; border-radius: 8px; background: var(--hover); }
+.dt-qi { display: flex; align-items: baseline; gap: 10px; padding: 5px 0; font-size: 13px; cursor: pointer; border-bottom: 1px solid var(--line); }
+.dt-qi:last-child { border-bottom: 0; }
+.dt-qh { flex: none; font-weight: 600; color: var(--muted); }
+.dt-qi .stem { flex: 1; min-width: 0; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.dt-tr { flex: none; font-size: 12px; }
+.dt-links { white-space: nowrap; }
