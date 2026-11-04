@@ -69,13 +69,13 @@ const branchQs = (t, br, pool = F) => pool.filter(q => inTree(q, t) && (q.me || 
 // (first such branch on ties); questions no branch names go last. Branch: {p path, w situation, m methods, crumbs}
 function treeSeq(t) {
   const brs = [];
-  const walk = (nodes, path, crumbs) => nodes.forEach((x, i) => {
+  const walk = (nodes, path, crumbs, ask) => nodes.forEach((x, i) => {
     const p = path + '.' + i;
-    if (x.q != null) return walk(x.b, p, crumbs);
-    if (x.m.length) brs.push({ p, w: x.w, m: x.m, no: x.no, crumbs });
-    walk(x.s, p, [...crumbs, x.w]);
+    if (x.q != null) return walk(x.b, p, crumbs, x.q);
+    if (x.m.length) brs.push({ p, w: x.w, m: x.m, no: x.no, crumbs, ask });
+    walk(x.s, p, [...crumbs, x.w], ask);
   });
-  walk(t.r, 'r', []);
+  walk(t.r, 'r', [], '');
   const pool = F.filter(q => q.th && q.th.d.length && inTree(q, t));
   const home = new Map();
   for (const q of pool) {
@@ -129,6 +129,9 @@ function trainPool() {
     : b.y - a.y || a.id.localeCompare(b.id, 'en', { numeric: true }));
 }
 const seqOf = id => TR.seq && TR.seq.find(x => x.id === id);
+// a branch out of its tree: a bare answer ("能", "是") gets the question it answers; a nested branch gets its parent
+const brWhen = br => /^(能|不能|是|否|有|没有|不是)$/.test(br.w.trim()) && br.ask ? `${br.ask.replace(/[？?]\s*$/, '')}：${br.w}` : br.w;
+const brLabel = br => br.crumbs.length ? `${br.crumbs[br.crumbs.length - 1]} › ${brWhen(br)}` : brWhen(br);
 const methodNames = m => m.map(mi => D.methods[mi] ? D.methods[mi].n : '').join('、');
 function renderTrainList() {
   const el = $('#tList');
@@ -175,7 +178,7 @@ function renderTrainList() {
       if (x.br !== br) {
         br = x.br; k++;
         const ids = TR.seq.filter(y => y.br === br).map(y => y.id), bp = progress(ids);
-        html += `<div class="qyr tr-br"><span class="tr-bn">${k}</span><span class="tr-bw">${tx(br.w)}${TR.hint && br.m.length ? ` <span class="muted small">· ${esc(methodNames(br.m))}</span>` : ''}</span>
+        html += `<div class="qyr tr-br"><span class="tr-bn">${k}</span><span class="tr-bw">${tx(brLabel(br))}${TR.hint && br.m.length ? ` <span class="muted small">· ${esc(methodNames(br.m))}</span>` : ''}</span>
           <span class="muted small">${bp.done}/${bp.n}</span></div>`;
       }
       html += row(qById[x.id]);
@@ -194,7 +197,7 @@ function trainStart(id) {
 // where this question sits in the tree; shown after answering (or throughout with 提示分支)
 function branchBox(x, tree, open) {
   if (!x || !x.br.p) return '';
-  const path = [...x.br.crumbs, x.br.w].map(tx).join(' <i>›</i> ');
+  const path = [...x.br.crumbs, brWhen(x.br)].map(tx).join(' <i>›</i> ');
   return `<div class="tr-where${open ? '' : ' closed'}"><span class="th-k">在决策树中</span>
     <div class="tr-path">${esc(tree.n)} <i>›</i> ${path}</div>
     ${open ? `<div>${x.br.m.map(mi => `<a class="mtag core" data-method="${D.methods[mi].id}">${esc(D.methods[mi].n)}</a>`).join('')}
@@ -233,7 +236,7 @@ function renderTrainMain() {
     const bp = progress(TR.seq.filter(y => y.br === sx.br).map(y => y.id));
     brEnd = `<div class="tr-brend">这一分支练完了：${bp.done}/${bp.n} 题，全对 ${bp.ok} 题${bp.dn ? `，决策选对 ${bp.dr}/${bp.dn}` : ''}</div>`;
   }
-  const nextLabel = nx && sx && nx.br !== sx.br ? `下一分支：${tx(clip(nx.br.w, 40))}` : '';
+  const nextLabel = nx && sx && nx.br !== sx.br ? `下一分支：${tx(clip(brLabel(nx.br), 60))}` : '';
   el.innerHTML = `<div class="kpd train">
     <div class="kpd-top"><button class="icon" data-tlist title="收起或展开左侧列表（L）">${TR.nolist ? '☰ 列表' : '⇤ 收起列表'}</button>
       <span class="crumb muted small">思路训练 · ${q.sub === 'LA' ? '线性代数' : '高等数学'} · ${TYPE[q.ty]}题</span>
