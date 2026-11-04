@@ -529,3 +529,27 @@ button.primary { background: var(--accent); color: var(--panel); border-color: v
 .dt-qi .stem { flex: 1; min-width: 0; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
 .dt-tr { flex: none; font-size: 12px; }
 .dt-links { white-space: nowrap; }
+
+/* tree-ordered practice: progress bars, session bar, branch groups, where-in-the-tree box */
+.tr-bar { display: inline-flex; width: 90px; height: 5px; border-radius: 3px; background: var(--line); overflow: hidden; vertical-align: middle; margin-left: 6px; }
+.tr-bar i { display: block; height: 100%; }
+.tr-bar i.ok { background: var(--k-met); } .tr-bar i.bad { background: var(--k-thm); }
+.dt-row .tr-bar { width: 100%; margin: 4px 0 0; height: 3px; }
+.dt-pr { font-size: 12px; color: var(--muted); }
+.dt-pr i { font-style: normal; }
+.dt-go { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 18px; }
+.dt-qi.hl { background: var(--panel); box-shadow: inset 3px 0 0 var(--accent); }
+.dt-qi .tr-ok, .dt-qi .tr-bad { flex: none; font-size: 12px; }
+.tr-sess { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 8px 12px; margin: 2px 0 10px; border-radius: 8px; background: var(--hover); font-size: 14px; }
+.tr-sess .tr-bar { width: 120px; }
+.tr-sess a { margin-left: auto; cursor: pointer; }
+.qyr.tr-br { display: flex; align-items: baseline; gap: 8px; font-weight: normal; font-size: 13px; line-height: 1.6; }
+.tr-bn { flex: none; font-weight: 600; color: var(--accent); }
+.tr-bw { flex: 1; min-width: 0; }
+.tr-where { margin: 12px 0; padding: 8px 14px; border-radius: 8px; border: 1px dashed var(--line); font-size: 14px; line-height: 1.8; }
+.tr-where .th-k { margin-bottom: 2px; }
+.tr-path i { font-style: normal; color: var(--muted); margin: 0 3px; }
+.tr-where .mtag { margin-right: 6px; }
+.tr-brend { margin: 14px 0 0; padding: 8px 12px; border-radius: 8px; background: var(--k-met-bg); font-size: 14px; }
+.tr-next { font-size: 13px; color: var(--muted); }
+#tList .ctl label { white-space: nowrap; }
